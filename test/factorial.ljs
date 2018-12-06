@@ -1,0 +1,32 @@
+// function closures are powerful
+
+// traditional fixed-point operator from functional programming
+Y = function (g) {
+      var a = function (f) { return f(f); };
+      return a(function (f) {
+                 return g(function (x) {
+                             var c=f(f);
+                             return c(x);
+                           });
+               });
+};
+
+
+// factorial without recursion
+F = function (f) {
+      return function (n) {
+               if( n == 0 ) { return 1;
+               } else { return n*f(n-1); }
+             };
+    };
+
+factorial = Y(F);   // factorial is the fixed point of F
+
+// now test it
+function test(x) {
+	io.write(x,"! = ",factorial(x),"\n");
+}
+
+for( n=0,16 ) {
+	test(n);
+}

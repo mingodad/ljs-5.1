@@ -1,0 +1,12 @@
+// make table, grouping all data for the same item
+// input is 2 columns (item, data)
+
+var A;
+while( 1 ) {
+ var l=io.read();
+ if( l==null ) { break; }
+ var _,_,a,b=string.find(l,'"?([_%w]+)"?%s*(.*)$');
+ if( a!=A ) { A=a; io.write("\n",a,":"); }
+ io.write(" ",b);
+}
+io.write("\n");

@@ -1,0 +1,42 @@
+// fibonacci function with cache
+
+var N;
+// very inefficient fibonacci function
+var function fib(n) {
+	N+=1;
+	if( n<2 ) {
+		return n;
+	} else {
+		return fib(n-1)+fib(n-2);
+	}
+}
+
+// a general-purpose value cache
+var function cache(f) {
+	var c={};
+	return function (x) {
+		var y=c[x];
+		if( ! y ) {
+			y=f(x);
+			c[x]=y;
+		}
+		return y;
+	};
+}
+
+var n;
+// run and time it
+var function test(s,f) {
+	N=0;
+	var c=os.clock();
+	var v=f(n);
+	var t=os.clock()-c;
+	print(s,n,v,string.format("%0.6f", t),N);
+}
+
+n=arg[1] || 24;		// for other values, do lua fib.lua XX
+n=tonumber(n);
+print("","n","value","time","evals");
+test("plain",fib);
+fib=cache(fib);
+test("cached",fib);

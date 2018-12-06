@@ -1,0 +1,38 @@
+// trace assigments to global variables
+
+{
+ // a tostring that quotes strings. note the use of the original tostring.
+ var _tostring=tostring;
+ var tostring=function(a) {
+  if( type(a)=="string" ) {
+   return string.format("%q",a);
+  } else {
+   return _tostring(a);
+  }
+ };
+
+ var log=function (name,old,new) {
+  var t=debug.getinfo(3,"Sl");
+  var line=t.currentline;
+  io.write(t.short_src);
+  if( line>=0 ) { io.write(":",line); }
+  io.write(": ",name," is now ",tostring(new)," (was ",tostring(old),")","\n");
+ };
+
+ var g={};
+ var set=function (t,name,value) {
+  log(name,g[name],value);
+  g[name]=value;
+ };
+ setmetatable(getfenv(),{__index=g,__newindex=set});
+}
+
+// an example
+
+a=1;
+b=2;
+a=10;
+b=20;
+b=null;
+b=200;
+print(a,b,c);

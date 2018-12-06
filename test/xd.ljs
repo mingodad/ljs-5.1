@@ -1,0 +1,14 @@
+// hex dump
+// usage: lua xd.lua < file
+
+var offset=0;
+while( true ) {
+ var s=io.read(16);
+ if( s==null ) { return; }
+ io.write(string.format("%08X  ",offset));
+ string.gsub(s,"(.)",
+	function (c) { io.write(string.format("%02X ",string.byte(c))); });
+ io.write(string.rep(" ",3*(16-string.len(s))));
+ io.write(" ",string.gsub(s,"%c","."),"\n"); 
+ offset+=16;
+}

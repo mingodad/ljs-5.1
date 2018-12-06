@@ -1,0 +1,41 @@
+//var f1_fname = "genminilua.ljs.out";
+//var f2_fname = "genminilua.lua.out";
+//var f1_fname = "lake.ljs.out";
+//var f2_fname = "lake.lua.out";
+var f1_fname = "lake.ljsjit.out";
+var f2_fname = "lake.luajit.out";
+/*
+var f1 = io.open(f1_fname)->read("*a");
+var f2 = io.open(f2_fname)->read("*a");
+print(#f1, #f2);
+*/
+
+var f1_fd = io.open(f1_fname);
+var f2_fd = io.open(f2_fname);
+
+var cleanLine = function(line : string) : string
+{
+	line = line->gsub("%[%d+%]", "");
+	line = line->gsub("0x[0-9a-fA-F]+", "");
+	line = line->replace(".ljs", "");
+	return line;
+}
+
+var line1 : string, line2 : string;
+
+while( true )
+{
+	line1 = f1_fd->read("*l");
+	line2 = f2_fd->read("*l");
+	if( line1 && line2 )
+	{
+		line1 = cleanLine(line1);
+		line2 = cleanLine(line2);
+		if(line1 != line2) print(line1, line2);
+		continue;
+	}
+	break;
+}
+
+f1_fd->close();
+f2_fd->close();

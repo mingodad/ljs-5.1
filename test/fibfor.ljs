@@ -1,0 +1,13 @@
+// example of for with generator functions
+
+function generatefib (n) {
+  return coroutine.wrap(function () {
+    var a,b = 1, 1;
+    while( a <= n ) {
+      coroutine.yield(a);
+      a, b = b, a+b;
+    }
+  });
+}
+
+for( i in generatefib(1000) ) { print(i); }

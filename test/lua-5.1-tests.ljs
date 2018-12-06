@@ -1,0 +1,4000 @@
+require ("minctest");
+
+var onLuajit = jit;
+//for luajit
+if( math.fmod && !math.mod ) math.mod = math.fmod;
+
+lrun("strings", function() {
+	lok('alo' < 'alo1');
+	lok('' < 'a');
+	lok('alo\0alo' < 'alo\0b');
+	lok('alo\0alo\0\0' > 'alo\0alo\0');
+	lok('alo' < 'alo\0');
+	lok('alo\0' > 'alo');
+	lok('\0' < '\1');
+	lok('\0\0' < '\0\1');
+	lok('\1\0a\0a' <= '\1\0a\0a');
+	lok(! ('\1\0a\0b' <= '\1\0a\0a'));
+	lok('\0\0\0' < '\0\0\0\0');
+	lok(!('\0\0\0\0' < '\0\0\0'));
+	lok('\0\0\0' <= '\0\0\0\0');
+	lok(!('\0\0\0\0' <= '\0\0\0'));
+	lok('\0\0\0' <= '\0\0\0');
+	lok('\0\0\0' >= '\0\0\0');
+	lok(! ('\0\0b' < '\0\0a\0'));
+
+	lok(string.sub("123456789",2,4) == "234");
+	lok(string.sub("123456789",7) == "789");
+	lok(string.sub("123456789",7,6) == "");
+	lok(string.sub("123456789",7,7) == "7");
+	lok(string.sub("123456789",0,0) == "");
+	lok(string.sub("123456789",-10,10) == "123456789");
+	lok(string.sub("123456789",1,9) == "123456789");
+	lok(string.sub("123456789",-10,-20) == "");
+	lok(string.sub("123456789",-1) == "9");
+	lok(string.sub("123456789",-4) == "6789");
+	lok(string.sub("123456789",-6, -4) == "456");
+	lok(string.sub("\000123456789",3,5) == "234");
+	lok(("\000123456789")->sub(8) == "789");
+
+	lok(string.find("123456789", "345") == 3);
+	a,b = string.find("123456789", "345");
+	lok(string.sub("123456789", a, b) == "345");
+	lok(string.find("1234567890123456789", "345", 3) == 3);
+	lok(string.find("1234567890123456789", "345", 4) == 13);
+	lok(string.find("1234567890123456789", "346", 4) == null);
+	lok(string.find("1234567890123456789", ".45", -9) == 13);
+	lok(string.find("abcdefg", "\0", 5, 1) == null);
+	lok(string.find("", "") == 1);
+	lok(string.find('', 'aaa', 1) == null);
+	lok(('alo(.)alo')->find('(.)', 1, 1) == 4);
+
+	lok(string.len("") == 0);
+	lok(string.len("\0\0\0") == 3);
+	lok(string.len("1234567890") == 10);
+
+	lok(#"" == 0);
+	lok(#"\0\0\0" == 3);
+	lok(#"1234567890" == 10);
+
+	lok(string.byte("a") == 97);
+	lok(string.byte("á") > 127);
+	lok(string.byte(string.char(255)) == 255);
+	lok(string.byte(string.char(0)) == 0);
+	lok(string.byte("\0") == 0);
+	lok(string.byte("\0\0alo\0x", -1) == string.byte('x'));
+	lok(string.byte("ba", 2) == 97);
+	lok(string.byte("\n\n", 2, -1) == 10);
+	lok(string.byte("\n\n", 2, 2) == 10);
+	lok(string.byte("") == null);
+	lok(string.byte("hi", -3) == null);
+	lok(string.byte("hi", 3) == null);
+	lok(string.byte("hi", 9, 10) == null);
+	lok(string.byte("hi", 2, 1) == null);
+	lok(string.char() == "");
+	lok(string.char(0, 255, 0) == "\0\255\0");
+	lok(string.char(0, string.byte("á"), 0) == "\0á\0");
+	lok(string.char(string.byte("ál\0óu", 1, -1)) == "ál\0óu");
+	lok(string.char(string.byte("ál\0óu", 1, 0)) == "");
+	lok(string.char(string.byte("ál\0óu", -10, 100)) == "ál\0óu");
+
+	lok(string.upper("ab\0c") == "AB\0C");
+	lok(string.lower("\0ABCc%$") == "\0abcc%$");
+	lok(string.rep('teste', 0) == '');
+	lok(string.rep('tés\00tê', 2) == 'tés\0têtés\000tê');
+	lok(string.rep('', 10) == '');
+
+	lok(string.reverse("") == "");
+	lok(string.reverse("\0\1\2\3") == "\3\2\1\0");
+	lok(string.reverse("\0001234") == "4321\0");
+
+	for( i=0,30 ) { lok(string.len(string.rep('a', i)) == i); }
+
+	lok(type(tostring(null)) == 'string');
+	lok(type(tostring(12)) == 'string');
+	lok(''..12 == '12' && type(12 .. '') == 'string');
+	lok(string.find(tostring({}), 'table:'));
+	lok(string.find(tostring(print), 'function:'));
+	lok(tostring(1234567890123) == '1234567890123');
+	lok(#tostring('\0') == 1);
+	lok(tostring(true) == "true");
+	lok(tostring(false) == "false");
+
+	x = '"ílo"\n\\';
+	lok(string.format('%q%s', x, x) == '"\\"ílo\\"\\\n\\\\""ílo"\n\\');
+	if( !onLuajit ) lok(string.format('%q', "\0") == [=["\000"]=]);
+	lok(string.format("\0%c\0%c%x\0", string.byte("á"), string.byte("b"), 140) ==
+		      "\0á\0b8c\0");
+	lok(string.format('') == "");
+	lok(string.format("%c",34)..string.format("%c",48)..string.format("%c",90)..string.format("%c",100) ==
+	       string.format("%c%c%c%c", 34, 48, 90, 100));
+	lok(string.format("%s\0 is not \0%s", 'not be', 'be') == 'not be\0 is not \0be');
+	lok(string.format("%%%d %010d", 10, 23) == "%10 0000000023");
+	lok(tonumber(string.format("%f", 10.3)) == 10.3);
+	x = string.format('"%-50s"', 'a');
+	lok(#x == 52);
+	lok(string.sub(x, 1, 4) == '"a  ');
+
+	lok(string.format("-%.20s.20s", string.rep("%", 2000)) == "-"..string.rep("%", 20)..".20s");
+	lok(string.format('"-%20s.20s"', string.rep("%", 2000)) ==
+	       string.format("%q", "-"..string.rep("%", 2000)..".20s"));
+
+
+	// longest number that can be formated
+	lok(string.len(string.format('%99.99f', -1e308)) >= 100);
+
+	lok(loadstring("return 1\n//comentário sem EOL no final")() == 1);
+
+
+	lok(table.concat({}) == "");
+	lok(table.concat({}, 'x') == "");
+	lok(table.concat({'\0', '\0\1', '\0\1\2'}, '.\0.') == "\0.\0.\0\1.\0.\0\1\2");
+	var a = {}; for( i=1,3000 ) { a[i] = "xuxu"; }
+	lok(table.concat(a, "123").."123" == string.rep("xuxu123", 3000));
+	lok(table.concat(a, "b", 20, 20) == "xuxu");
+	lok(table.concat(a, "", 20, 21) == "xuxuxuxu");
+	lok(table.concat(a, "", 22, 21) == "");
+	lok(table.concat(a, "3", 2999) == "xuxu3xuxu");
+
+	a = {"a","b","c"};
+	lok(table.concat(a, ",", 1, 0) == "");
+	lok(table.concat(a, ",", 1, 1) == "a");
+	lok(table.concat(a, ",", 1, 2) == "a,b");
+	lok(table.concat(a, ",", 2) == "b,c");
+	lok(table.concat(a, ",", 3) == "c");
+	lok(table.concat(a, ",", 4) == "");
+
+	var locales = { "ptb", "ISO-8859-1", "pt_BR" };
+	var function trylocale (w) {
+	  for( _, l in ipairs(locales) ) {
+	    if( os.setlocale(l, w) ) { return true; }
+	  }
+	  return false;
+	}
+
+	if( trylocale("collate")  ) {
+	  lok("alo" < "álo" && "álo" < "amo");
+	}
+
+	if( trylocale("ctype") ) {
+	  lok(string.gsub("áéíóú", "%a", "x") == "xxxxx");
+	  lok(string.gsub("áÁéÉ", "%l", "x") == "xÁxÉ");
+	  lok(string.gsub("áÁéÉ", "%u", "x") == "áxéx");
+	  lok(string.upper("áÁé{xuxu}ção") == "ÁÁÉ{XUXU}ÇÃO");
+	}
+
+	os.setlocale("C");
+	lok(os.setlocale() == 'C');
+	lok(os.setlocale(null, "numeric") == 'C');
+});
+
+lrun("math", function() {
+	{
+	  var a,b,c = "2", " 3e0 ", " 10  ";
+	  lok(a+b == 5 && -b == -3 && b+"2" == 5 && "10"-c == 0);
+	  lok(type(a) == 'string' && type(b) == 'string' && type(c) == 'string');
+	  lok(a == "2" && b == " 3e0 " && c == " 10  " && -c == -"  10 ");
+	  lok(c%a == 0 && a**b == 8);
+	}
+
+
+	{
+	  var a,b = math.modf(3.5);
+	  lok(a == 3 && b == 0.5);
+	  lok(math.huge > 10e30);
+	  lok(-math.huge < -10e30);
+	}
+
+	function f(...) {
+	  if( select('#', ...) == 1 ) {
+	    return (...);
+	  } else {
+	    return "***";
+	  }
+	}
+
+	lok(tonumber({}) == null);
+	lok(tonumber('+0.01') == 1/100 && tonumber('+.01') == 0.01 &&
+	       tonumber('.01') == 0.01    && tonumber('-1.') == -1 &&
+	       tonumber('+1.') == 1);
+	lok(tonumber('+ 0.01') == null && tonumber('+.e1') == null &&
+	       tonumber('1e') == null     && tonumber('1.0e+') == null &&
+	       tonumber('.') == null);
+	lok(tonumber('-12') == -10-2);
+	lok(tonumber('-1.2e2') == - - -120);
+	lok(f(tonumber('1  a')) == null);
+	lok(f(tonumber('e1')) == null);
+	lok(f(tonumber('e  1')) == null);
+	lok(f(tonumber(' 3.4.5 ')) == null);
+	lok(f(tonumber('')) == null);
+	lok(f(tonumber('', 8)) == null);
+	lok(f(tonumber('  ')) == null);
+	lok(f(tonumber('  ', 9)) == null);
+	lok(f(tonumber('99', 8)) == null);
+	lok(tonumber('  1010  ', 2) == 10);
+	lok(tonumber('10', 36) == 36);
+	//lok(tonumber('\n  -10  \n', 36) == -36)
+	//lok(tonumber('-fFfa', 16) == -(10+(16*(15+(16*(15+(16*15)))))))
+	lok(tonumber('fFfa', 15) == null);
+	//lok(tonumber(string.rep('1', 42), 2) + 1 == 2^42)
+	lok(tonumber(string.rep('1', 32), 2) + 1 == 2**32);
+	//lok(tonumber('-fffffFFFFF', 16)-1 == -2^40)
+	lok(tonumber('ffffFFFF', 16)+1 == 2**32);
+
+	lok(1.1 == 1.+.1);
+	lok(100.0 == 1E2 && .01 == 1e-2);
+	lok(1111111111111111-1111111111111110== 1000.00e-03);
+	//     1234567890123456
+	lok(1.1 == '1.'+'.1');
+	lok('1111111111111111'-'1111111111111110' == tonumber("  +0.001e+3 \n\t"));
+
+	function eq (a,b,limit) {
+	  if( ! limit ) { limit = 10E-10; }
+	  return math.abs(a-b) <= limit;
+	}
+
+	lok(0.1e-30 > 0.9E-31 && 0.9E30 < 0.1e31);
+
+	lok(0.123456 > 0.123455);
+
+	lok(tonumber('+1.23E30') == 1.23*10**30);
+
+	// testing order operators
+	lok(!(1<1) && (1<2) && !(2<1));
+	lok(!('a'<'a') && ('a'<'b') && !('b'<'a'));
+	lok((1<=1) && (1<=2) && !(2<=1));
+	lok(('a'<='a') && ('a'<='b') && !('b'<='a'));
+	lok(!(1>1) && !(1>2) && (2>1));
+	lok(!('a'>'a') && !('a'>'b') && ('b'>'a'));
+	lok((1>=1) && !(1>=2) && (2>=1));
+	lok(('a'>='a') && !('a'>='b') && ('b'>='a'));
+
+	// testing mod operator
+	lok(-4%3 == 2);
+	lok(4%-3 == -2);
+	lok(math.pi - math.pi % 1 == 3);
+	lok(math.pi - math.pi % 0.001 == 3.141);
+
+	var function testbit(a, n) {
+	  return a/2**n % 2 >= 1;
+	}
+
+	lok(eq(math.sin(-9.8)**2 + math.cos(-9.8)**2, 1));
+	lok(eq(math.tan(math.pi/4), 1));
+	lok(eq(math.sin(math.pi/2), 1) && eq(math.cos(math.pi/2), 0));
+	lok(eq(math.atan(1), math.pi/4) && eq(math.acos(0), math.pi/2) &&
+	       eq(math.asin(1), math.pi/2));
+	lok(eq(math.deg(math.pi/2), 90) && eq(math.rad(90), math.pi/2));
+	lok(math.abs(-10) == 10);
+	lok(eq(math.atan2(1,0), math.pi/2));
+	lok(math.ceil(4.5) == 5.0);
+	lok(math.floor(4.5) == 4.0);
+	lok(math.mod(10,3) == 1);
+	lok(eq(math.sqrt(10)**2, 10));
+	lok(eq(math.log10(2), math.log(2)/math.log(10)));
+	lok(eq(math.exp(0), 1));
+	lok(eq(math.sin(10), math.sin(10%(2*math.pi))));
+	var v,e = math.frexp(math.pi);
+	lok(eq(math.ldexp(v,e), math.pi));
+
+	lok(eq(math.tanh(3.5), math.sinh(3.5)/math.cosh(3.5)));
+
+	lok(tonumber(' 1.3e-2 ') == 1.3e-2);
+	lok(tonumber(' -1.00000000000001 ') == -1.00000000000001);
+
+	// testing constant limits
+	// 2^23 = 8388608
+	lok(8388609 + -8388609 == 0);
+	lok(8388608 + -8388608 == 0);
+	lok(8388607 + -8388607 == 0);
+
+	if( rawget(_G, "_soft") ) { return; }
+
+	f = io.tmpfile();
+	lok(f);
+	f->write("a = {");
+	i = 1;
+	do {
+	  f->write("{", math.sin(i), ", ", math.cos(i), ", ", i/3, "},\n");
+	  i+=1;
+	} while(!( i > 1000) );
+	f->write("}");
+	f->seek("set", 0);
+	var src = f->read('*a');
+	var res = loadstring(src)();
+	//print(src)
+	//print(res)
+	//lok(res)
+	lok(f->close());
+
+	lok(eq(a[300][1], math.sin(300)));
+	lok(eq(a[600][1], math.sin(600)));
+	lok(eq(a[500][2], math.cos(500)));
+	lok(eq(a[800][2], math.cos(800)));
+	lok(eq(a[200][3], 200/3));
+	lok(eq(a[1000][3], 1000/3, 0.001));
+
+	{   // testing NaN
+	  var NaN = 10e500 - 10e400;
+	  lok(NaN != NaN);
+	  lok(! (NaN < NaN));
+	  lok(! (NaN <= NaN));
+	  lok(! (NaN > NaN));
+	  lok(! (NaN >= NaN));
+	  lok(! (0 < NaN));
+	  lok(! (NaN < 0));
+	  var a = {};
+	  lok(! pcall(function () { a[NaN] = 1; }));
+	  lok(a[NaN] == null);
+	  a[1] = 1;
+	  lok(! pcall(function () { a[NaN] = 1; }));
+	  lok(a[NaN] == null);
+	}
+
+	//require "checktable"
+	//stat(a)
+
+	a = null;
+
+	// testing implicit convertions
+
+	var a,b = '10', '20';
+	lok(a*b == 200 && a+b == 30 && a-b == -10 && a/b == 0.5 && -b == -20);
+	lok(a == '10' && b == '20');
+
+
+	math.randomseed(0);
+
+	var i = 0;
+	var Max = 0;
+	var Min = 2;
+	do {
+	  var t = math.random();
+	  Max = math.max(Max, t);
+	  Min = math.min(Min, t);
+	  i+=1;
+	  flag = eq(Max, 1, 0.001) && eq(Min, 0, 0.001);
+	} while(!( flag || i>10000) );
+	lok(0 <= Min && Max<1);
+	lok(flag);
+
+	for( i=1,10 ) {
+	  var t = math.random(5);
+	  lok(1 <= t && t <= 5);
+	}
+
+	i = 0;
+	Max = -200;
+	Min = 200;
+	do {
+	  var t = math.random(-10,0);
+	  Max = math.max(Max, t);
+	  Min = math.min(Min, t);
+	  i+=1;
+	  flag = (Max == 0 && Min == -10);
+	} while(!( flag || i>10000) );
+	lok(-10 <= Min && Max<=0);
+	lok(flag);
+});
+
+lrun("calls", function() {
+
+	// get the opportunity to test 'type' too ;)
+
+	lok(type(1<2) == 'boolean');
+	lok(type(true) == 'boolean' && type(false) == 'boolean');
+	lok(type(null) == 'null' && type(-3) == 'number' && type('x') == 'string' &&
+	       type({}) == 'table' && type(type) == 'function');
+
+	lok(type(assert) == type(print));
+	f = null;
+	function f (x) { return a->x (x); }
+	lok(type(f) == 'function');
+
+
+	// testing local-function recursion
+	fact = false;
+	{
+	  var res = 1;
+	  var function fact (n) {
+	    if( n==0 ) { return res;
+	    } else { return n*fact(n-1);
+	    }
+	  }
+	  lok(fact(5) == 120);
+	}
+	lok(fact == false);
+
+	// testing declarations
+	a = {i = 10};
+	this = 20;
+	function a::x (x) { return x+this.i; }
+	function a.y (x) { return x+this; }
+
+	lok(a->x(1)+10 == a.y(1));
+
+	a.t = {i=-100};
+	a["t"].x = function (this, a,b) { return this.i+a+b; };
+
+	lok(a.t->x(2,3) == -95);
+
+	{
+	  var a = {x=0};
+	  function a::add (x) { this.x, a.y = this.x+x, 20; return this; }
+	  lok(a->add(10)->add(20)->add(30).x == 60 && a.y == 20);
+	}
+
+	var a = {b={c={}}};
+
+	function a.b.c.f1 (x) { return x+1; }
+	function a.b.c::f2 (x,y) { this[x] = y; }
+	lok(a.b.c.f1(4) == 5);
+	a.b.c->f2('k', 12); lok(a.b.c.k == 12);
+
+	t = null;   // 'declare' t
+	function f(a,b,c) { var d = 'a'; t={a,b,c,d}; }
+
+	f(      // this line change must be valid
+	  1,2);
+	lok(t[1] == 1 && t[2] == 2 && t[3] == null && t[4] == 'a');
+	f(1,2,   // this one too
+	      3,4);
+	lok(t[1] == 1 && t[2] == 2 && t[3] == 3 && t[4] == 'a');
+
+	function fat(x) {
+	  if( x <= 1 ) { return 1;
+	  } else { return x*loadstring("return fat(" .. x-1 .. ")")();
+	  }
+	}
+
+	var res = loadstring("loadstring('lok(fat(6)==720)')() ")();
+	//lok(res)
+	a = loadstring('return fat(5), 3');
+	a,b = a();
+	lok(a == 120 && b == 3);
+
+	function err_on_n (n) {
+	  if( n==0 ) { error(); exit(1);
+	  } else { err_on_n (n-1); exit(1);
+	  }
+	}
+
+	{
+	  function dummy (n) {
+	    if( n > 0 ) {
+	      lok(! pcall(err_on_n, n));
+	      dummy(n-1);
+	    }
+	  }
+	}
+
+	dummy(10);
+
+	function deep (n) {
+	  if( n>0 ) { deep(n-1); }
+	}
+	deep(10);
+	deep(200);
+
+	// testing tail call
+	function deep (n) { if( n>0 ) { return deep(n-1); } else { return 101; } }
+	lok(deep(30000) == 101);
+	a = {};
+	function a::deep (n) { if( n>0 ) { return this->deep(n-1); } else { return 101; } }
+	lok(a->deep(30000) == 101);
+
+	a = null;
+	(function (x) { a=x; })(23);
+	lok(a == 23 && (function (x) { return x*2; })(20) == 40);
+
+
+	var x,y,z;
+	a = {}; lim = 2000;
+	for( i=1, lim ) { a[i]=i; }
+	lok(select(lim, unpack(a)) == lim && select('#', unpack(a)) == lim);
+	x = unpack(a);
+	lok(x == 1);
+	x = {unpack(a)};
+	lok(table.getn(x) == lim && x[1] == 1 && x[lim] == lim);
+	x = {unpack(a, lim-2)};
+	lok(table.getn(x) == 3 && x[1] == lim-2 && x[3] == lim);
+	x = {unpack(a, 10, 6)};
+	lok(next(x) == null);   // no elements
+	x = {unpack(a, 11, 10)};
+	lok(next(x) == null);   // no elements
+	x,y = unpack(a, 10, 10);
+	lok(x == 10 && y == null);
+	x,y,z = unpack(a, 10, 11);
+	lok(x == 10 && y == 11 && z == null);
+	a,x = unpack({1});
+	lok(a==1 && x==null);
+	a,x = unpack({1,2}, 1, 1);
+	lok(a==1 && x==null);
+
+
+	// testing closures
+
+	// fixed-point operator
+	Y = function (le) {
+	      var function a (f) {
+		return le(function (x) { return f(f)(x); });
+	      }
+	      return a(a);
+	    };
+
+
+	// non-recursive factorial
+
+	F = function (f) {
+	      return function (n) {
+		       if( n == 0 ) { return 1;
+		       } else { return n*f(n-1); }
+		     };
+	    };
+
+	fat = Y(F);
+
+	lok(fat(0) == 1 && fat(4) == 24 && Y(F)(5)==5*Y(F)(4));
+
+	var function g (z) {
+	  var function f (a,b,c,d) {
+	    return function (x,y) { return a+b+c+d+a+x+y+z; };
+	  }
+	  return f(z,z+1,z+2,z+3);
+	}
+
+	f = g(10);
+	lok(f(9, 16) == 10+11+12+13+10+9+16+10);
+
+	Y, F, f = null;
+
+	// testing multiple returns
+
+	function unlpack (t, i) {
+	  i = i || 1;
+	  if( (i <= table.getn(t)) ) {
+	    return t[i], unlpack(t, i+1);
+	  }
+	}
+
+	function equaltab (t1, t2) {
+	  lok(table.getn(t1) == table.getn(t2));
+	  for( i,v1 in ipairs(t1) ) {
+	    lok(v1 == t2[i]);
+	  }
+	}
+
+	var function pack (...) {
+	  var x = {...};
+	  x.n = select('#', ...);
+	  return x;
+	}
+
+	function f() { return 1,2,30,4; }
+	function ret2 (a,b) { return a,b; }
+
+	var b,c,d;
+	a,b,c,d = unlpack({1,2,3});
+	lok(a==1 && b==2 && c==3 && d==null);
+	a = {1,2,3,4,false,10,'alo',false,assert};
+	equaltab(pack(unlpack(a)), a);
+	equaltab(pack(unlpack(a), -1), {1,-1});
+	a,b,c,d = ret2(f()), ret2(f());
+	lok(a==1 && b==1 && c==2 && d==null);
+	a,b,c,d = unlpack(pack(ret2(f()), ret2(f())));
+	lok(a==1 && b==1 && c==2 && d==null);
+	a,b,c,d = unlpack(pack(ret2(f()), (ret2(f()))));
+	lok(a==1 && b==1 && c==null && d==null);
+
+	a = ret2({ unlpack({1,2,3}), unlpack({3,2,1}), unlpack({"a", "b"})});
+	lok(a[1] == 1 && a[2] == 3 && a[3] == "a" && a[4] == "b");
+
+
+	// testing calls with 'incorrect' arguments
+	rawget({}, "x", 1);
+	rawset({}, "x", 1, 2);
+	lok(math.sin(1,2) == math.sin(1));
+	table.sort({10,9,8,4,19,23,0,0}, function (a,b) { return a<b; }, "extra arg");
+
+
+	// test for generic load
+	x = "// a comment\0\0\0\n  x = 10 + \n23; \
+	     var a = function () {x = 'hi' }; \
+	     return '\0'";
+	var i = 0;
+	function read1 (x) {
+	  return function () {
+	    collectgarbage();
+	    i+=1;
+	    return string.sub(x, i, i);
+	  };
+	}
+
+	a = load(read1(x), "modname");
+	lok(a);
+	lok(a() == "\0" && _G.x == 33);
+	lok(debug.getinfo(a).source == "modname");
+
+	x = string.dump(loadstring("x = 1; return x"));
+	i = 0;
+	a = load(read1(x));
+	lok(a);
+	lok(a() == 1 && _G.x == 1);
+
+	i = 0;
+	a, b = load(read1("*a = 123"));
+	lok(! a && type(b) == "string" && i == 2);
+
+	a, b = load(function () { error("hhi"); });
+	lok(! a && string.find(b, "hhi"));
+
+	// test generic load with nested functions
+	x = [=[
+	  return function (x) {
+	    return function (y) {
+	     return function (z) {
+	       return x+y+z
+	     }
+	   }
+	  }
+	]=];
+
+	a = load(read1(x));
+	lok(a);
+	res = a()(2)(3)(10);
+	lok(res == 15);
+
+
+	// test for dump/undump with upvalues
+	a, b = 20, 30;
+	x = loadstring(string.dump(function (x) {
+	  if( x == "set" ) { a = 10+b; b += 1; } else {
+	  return a;
+	  }
+	}));
+	lok(x() == null);
+	lok(debug.setupvalue(x, 1, "hi") == "a");
+	lok(x() == "hi");
+	lok(debug.setupvalue(x, 2, 13) == "b");
+	lok(! debug.setupvalue(x, 3, 10));   // only 2 upvalues
+	x("set");
+	lok(x() == 23);
+	x("set");
+	lok(x() == 24);
+
+
+	// test for bug in parameter adjustment
+	lok((function () { return null; })(4) == null);
+	lok((function () { var a; return a; })(4) == null);
+	lok((function (a) { return a; })() == null);
+
+});
+
+lrun("closures", function() {
+
+	var A,B = 0,{g=10};
+	function f(x) {
+	  var a = {};
+	  for( i=1,1000 ) {
+	    var y = 0;
+	    {
+	      a[i] = function () { B.g = B.g+1; y += x; return y+A; };
+	    }
+	  }
+	  var dummy = function () { return a[A]; };
+	  collectgarbage();
+	  A = 1; lok(dummy() == a[1]); A = 0;
+	  lok(a[1]() == x);
+	  lok(a[3]() == x);
+	  collectgarbage();
+	  lok(B.g == 12);
+	  return a;
+	}
+
+	a = f(10);
+	// force a GC in this level
+	var x = {[1] = {}};   // to detect a GC
+	setmetatable(x, {__mode = 'kv'});
+	if( !onLuajit ) {
+		while( x[1] ) {   // repeat until GC
+		  var a = A..A..A..A;  // create garbage
+		  A += 1;
+		}
+		lok(a[1]() == 20+A);
+		lok(a[1]() == 30+A);
+		lok(a[2]() == 10+A);
+		collectgarbage();
+		lok(a[2]() == 20+A);
+		lok(a[2]() == 30+A);
+		lok(a[3]() == 20+A);
+		lok(a[8]() == 10+A);
+		lok(getmetatable(x).__mode == 'kv');
+		lok(B.g == 19);
+	}
+
+	// testing closures with 'for' control variable
+	a = {};
+	for( i=1,10 ) {
+	  a[i] = {set = function(x) { i=x; }, get = function () { return i; }};
+	  if( i == 3 ) { break; }
+	}
+	lok(a[4] == null);
+	a[1].set(10);
+	lok(a[2].get() == 2);
+	a[2].set('a');
+	lok(a[3].get() == 3);
+	lok(a[2].get() == 'a');
+
+	a = {};
+	for( i, k in pairs({'a', 'b'}) ) {
+	  a[i] = {set = function(x, y) { i=x; k=y; },
+		  get = function () { return i, k; }};
+	  if( i == 2 ) { break; }
+	}
+	a[1].set(10, 20);
+	var r,s = a[2].get();
+	lok(r == 2 && s == 'b');
+	r,s = a[1].get();
+	lok(r == 10 && s == 20);
+	a[2].set('a', 'b');
+	r,s = a[2].get();
+	lok(r == "a" && s == "b");
+
+
+	// testing closures with 'for' control variable x break
+	for( i=1,3 ) {
+	  f = function () { return i; };
+	  break;
+	}
+	lok(f() == 1);
+
+	for( k, v in pairs({"a", "b"}) ) {
+	  f = function () { return k, v; };
+	  break;
+	}
+	lok(({f()})[1] == 1);
+	lok(({f()})[2] == "a");
+
+
+	// testing closure x break x return x errors
+
+	var b;
+	function f(x) {
+	  var first = 1;
+	  while( 1 ) {
+	    if( x == 3 && ! first ) { return; }
+	    var a = 'xuxu';
+	    b = function (op, y) {
+		  if( op == 'set' ) {
+		    a = x+y;
+		  } else {
+		    return a;
+		  }
+		};
+	    if( x == 1 ) { { break; }
+	    } else if( x == 2 ) { return;
+	    } else { if( x != 3 ) { error(); }
+	    }
+	    first = null;
+	  }
+	}
+
+	for( i=1,3 ) {
+	  f(i);
+	  lok(b('get') == 'xuxu');
+	  b('set', 10); lok(b('get') == 10+i);
+	  b = null;
+	}
+
+	pcall(f, 4);
+	lok(b('get') == 'xuxu');
+	b('set', 10); lok(b('get') == 14);
+
+
+	var w;
+	// testing multi-level closure
+	function f(x) {
+	  return function (y) {
+	    return function (z) { return w+x+y+z; };
+	  };
+	}
+
+	y = f(10);
+	w = 1.345;
+	lok(y(20)(30) == 60+w);
+
+	// testing closures x repeat-until
+
+	var a = {};
+	var i = 1;
+	do {
+	  var x = i;
+	  a[i] = function () { i = x+1; return x; };
+	} while(!( i > 10 || a[i]() != x) );
+	lok(i == 11 && a[1]() == 1 && a[3]() == 3 && i == 4);
+
+
+	// test for correctly closing upvalues in tail calls of vararg functions
+	var function t () {
+	  var function c(a,b) { lok(a=="test" && b=="OK"); }
+	  var function v(f, ...) { c("test", f() != 1 && "FAILED" || "OK"); }
+	  var x = 1;
+	  return v(function() { return x; });
+	}
+	t();
+
+
+	// coroutine tests
+
+	var f;
+
+	if( !onLuajit ) lok(coroutine.running() == null);
+
+
+	// tests for global environment
+
+	var function foo (a) {
+	  setfenv(0, a);
+	  coroutine.yield(getfenv());
+	  lok(getfenv(0) == a);
+	  lok(getfenv(1) == _G);
+	  lok(getfenv(loadstring("")) == a);
+	  return getfenv();
+	}
+
+	f = coroutine.wrap(foo);
+	a = {};
+	lok(f(a) == _G);
+	if( !onLuajit ) {
+		var a,b = pcall(f);
+		lok(a && b == _G);
+	}
+
+
+	// tests for multiple yield/resume arguments
+
+	var function eqtab (t1, t2) {
+	  lok(table.getn(t1) == table.getn(t2));
+	  for( i,v in ipairs(t1) ) {
+	    lok(t2[i] == v);
+	  }
+	}
+
+	_G.x = null;   // declare x
+	function foo (a, ...) {
+	  lok(coroutine.running() == f);
+	  lok(coroutine.status(f) == "running");
+	  var xarg = {...};
+	  for( i=1,#xarg ) {
+	    _G.x = {coroutine.yield(unpack(xarg[i]))};
+	  }
+	  return unpack(a);
+	}
+
+	f = coroutine.create(foo);
+	lok(type(f) == "thread" && coroutine.status(f) == "suspended");
+	lok(string.find(tostring(f), "thread"));
+	var c,d;
+	s,a,b,c,d = coroutine.resume(f, {1,2,3}, {}, {1}, {'a', 'b', 'c'});
+	lok(s && a == null && coroutine.status(f) == "suspended");
+	s,a,b,c,d = coroutine.resume(f);
+	eqtab(_G.x, {});
+	lok(s && a == 1 && b == null);
+	s,a,b,c,d = coroutine.resume(f, 1, 2, 3);
+	eqtab(_G.x, {1, 2, 3});
+	lok(s && a == 'a' && b == 'b' && c == 'c' && d == null);
+	s,a,b,c,d = coroutine.resume(f, "xuxu");
+	eqtab(_G.x, {"xuxu"});
+	lok(s && a == 1 && b == 2 && c == 3 && d == null);
+	lok(coroutine.status(f) == "dead");
+	s, a = coroutine.resume(f, "xuxu");
+	lok(! s && string.find(a, "dead") && coroutine.status(f) == "dead");
+
+
+	// yields in tail calls
+	var function lfoo (i) { return coroutine.yield(i); }
+	f = coroutine.wrap(function () {
+	  for( i=1,10 ) {
+	    lok(lfoo(i) == _G.x);
+	  }
+	  return 'a';
+	});
+	for( i=1,10 ) { _G.x = i; lok(f(i) == i); }
+	_G.x = 'xuxu'; lok(f('xuxu') == 'a');
+
+	// recursive
+	function pf (n, i) {
+	  coroutine.yield(n);
+	  pf(n*i, i+1);
+	}
+
+	f = coroutine.wrap(pf);
+	s=1;
+	for( i=1,10 ) {
+	  lok(f(1, 1) == s);
+	  s *= i;
+	}
+
+	// sieve
+	function gen (n) {
+	  return coroutine.wrap(function () {
+	    for( i=2,n ) { coroutine.yield(i); }
+	  });
+	}
+
+
+	function filter (p, g) {
+	  return coroutine.wrap(function () {
+	    while( 1 ) {
+	      var n = g();
+	      if( n == null ) { return; }
+	      if( math.mod(n, p) != 0 ) { coroutine.yield(n); }
+	    }
+	  });
+	}
+
+	x = gen(100);
+	a = {};
+	while( 1 ) {
+	  var n = x();
+	  if( n == null ) { break; }
+	  table.insert(a, n);
+	  x = filter(n, x);
+	}
+
+	lok(table.getn(a) == 25 && a[table.getn(a)] == 97);
+
+
+	// errors in coroutines
+	function foo () {
+	  lok(debug.getinfo(1).currentline == debug.getinfo(foo).linedefined + 1);
+	  lok(debug.getinfo(2).currentline == debug.getinfo(goo).linedefined);
+	  coroutine.yield(3);
+	  error(foo);
+	}
+
+	function goo() { foo(); }
+	x = coroutine.wrap(goo);
+	lok(x() == 3);
+	a,b = pcall(x);
+	lok(! a && b == foo);
+
+	x = coroutine.create(goo);
+	a,b = coroutine.resume(x);
+	lok(a && b == 3);
+	a,b = coroutine.resume(x);
+	lok(! a && b == foo && coroutine.status(x) == "dead");
+	a,b = coroutine.resume(x);
+	lok(! a && string.find(b, "dead") && coroutine.status(x) == "dead");
+
+
+	// co-routines x for loop
+	function all (a, n, k) {
+	  if( k == 0 ) { coroutine.yield(a);
+	  } else {
+	    for( i=1,n ) {
+	      a[k] = i;
+	      all(a, n, k-1);
+	    }
+	  }
+	}
+
+	a = 0;
+	for( t in coroutine.wrap(function () { all({}, 5, 4); }) ) {
+	  a += 1;
+	}
+	lok(a == 5**4);
+
+
+	// access to locals of collected corroutines
+	var C = {}; setmetatable(C, {__mode = "kv"});
+	x = coroutine.wrap (function () {
+		    var a = 10;
+		    var function f () { a += 10; return a; }
+		    while( true ) {
+		      a += 1;
+		      coroutine.yield(f);
+		    }
+		  });
+
+	C[1] = x;
+
+	f = x();
+	lok(f() == 21 && x()() == 32 && x() == f);
+	x = null;
+	collectgarbage();
+	lok(C[1] == null);
+	lok(f() == 43 && f() == 53);
+
+
+	// old bug: attempt to resume itself
+
+	function co_func (current_co) {
+	  lok(coroutine.running() == current_co);
+	  lok(coroutine.resume(current_co) == false);
+	  lok(coroutine.resume(current_co) == false);
+	  return 10;
+	}
+
+	var co = coroutine.create(co_func);
+	a,b = coroutine.resume(co, co);
+	lok(a == true && b == 10);
+	lok(coroutine.resume(co, co) == false);
+	lok(coroutine.resume(co, co) == false);
+
+	// access to locals of erroneous coroutines
+	x = coroutine.create (function () {
+		    var a = 10;
+		    _G.f = function () { a+=1; return a; };
+		    error('x');
+		  });
+
+	lok(! coroutine.resume(x));
+	// overwrite previous position of local `a'
+	lok(! coroutine.resume(x, 1, 1, 1, 1, 1, 1, 1));
+	lok(_G.f() == 11);
+	lok(_G.f() == 12);
+
+
+	if( T ) {
+
+	  var turn;
+	  
+	  function fact (t, x) {
+	    lok(turn == t);
+	    if( x == 0 ) { return 1;
+	    } else { return x*fact(t, x-1);
+	    }
+	  }
+
+	  var A,B,a,b = 0,0,0,0;
+
+	  var x = coroutine.create(function () {
+	    T.setyhook("", 2);
+	    A = fact("A", 10);
+	  });
+
+	  var y = coroutine.create(function () {
+	    T.setyhook("", 3);
+	    B = fact("B", 11);
+	  });
+
+	  while( A==0 || B==0 ) {
+	    if( A==0 ) { turn = "A"; T.resume(x); }
+	    if( B==0 ) { turn = "B"; T.resume(y); }
+	  }
+
+	  lok(B/A == 11);
+	}
+
+
+	// leaving a pending coroutine open
+	_X = coroutine.wrap(function () {
+	      var a = 10;
+	      var x = function () { a += 1; };
+	      coroutine.yield();
+	    });
+
+	_X();
+
+
+	// coroutine environments
+	co = coroutine.create(function () {
+	       coroutine.yield(getfenv(0));
+	       return loadstring("return a")();
+	     });
+
+	a = {a = 15};
+	debug.setfenv(co, a);
+	lok(debug.getfenv(co) == a);
+	lok(select(2, coroutine.resume(co)) == a);
+	lok(select(2, coroutine.resume(co)) == a.a);
+});
+
+lrun("metatables", function() {
+	X = 20; B = 30;
+
+	setfenv(1, setmetatable({}, {__index=_G}));
+
+	collectgarbage();
+
+	X += 10;
+	lok(X == 30 && _G.X == 20);
+	B = false;
+	lok(B == false);
+	B = null;
+	lok(B == 30);
+
+	lok(getmetatable({}) == null);
+	lok(getmetatable(4) == null);
+	lok(getmetatable(null) == null);
+	a={}; setmetatable(a, {__metatable = "xuxu",
+			    __tostring=function(x) { return x.name; }});
+	lok(getmetatable(a) == "xuxu");
+	lok(tostring(a) == null);
+	// cannot change a protected metatable
+	lok(pcall(setmetatable, a, {}) == false);
+	a.name = "gororoba";
+	lok(tostring(a) == "gororoba");
+
+	var a, t = {10,20,30; x="10", y="20"}, {};
+	lok(setmetatable(a,t) == a);
+	lok(getmetatable(a) == t);
+	lok(setmetatable(a,null) == a);
+	lok(getmetatable(a) == null);
+	lok(setmetatable(a,t) == a);
+
+
+	function f (t, i, e) {
+	  lok(! e);
+	  var p = rawget(t, "parent");
+	  return (p && p[i]+3), "dummy return";
+	}
+
+	t.__index = f;
+
+	a.parent = {z=25, x=12, [4] = 24};
+	lok(a[1] == 10 && a.z == 28 && a[4] == 27 && a.x == "10");
+
+	collectgarbage();
+
+	a = setmetatable({}, t);
+	function f(t, i, v) { rawset(t, i, v-3); }
+	t.__newindex = f;
+	a[1] = 30; a.x = "101"; a[5] = 200;
+	lok(a[1] == 27 && a.x == 98 && a[5] == 197);
+
+
+	var c = {};
+	a = setmetatable({}, t);
+	t.__newindex = c;
+	a[1] = 10; a[2] = 20; a[3] = 90;
+	lok(c[1] == 10 && c[2] == 20 && c[3] == 90);
+
+
+	{
+	  var a;
+	  a = setmetatable({}, {__index = setmetatable({},
+			     {__index = setmetatable({},
+			     {__index = function (_,n) { return a[n-3]+4, "lixo"; }})})});
+	  a[0] = 20;
+	  for( i=0,10 ) {
+	    lok(a[i*3] == 20 + i*4);
+	  }
+	}
+
+
+	{  // newindex
+	  var foi;
+	  var a = {};
+	  for( i=1,10 ) { a[i] = 0; a['a'..i] = 0; }
+	  setmetatable(a, {__newindex = function (t,k,v) { foi=true; rawset(t,k,v); }});
+	  foi = false; a[1]=0; lok(! foi);
+	  foi = false; a['a1']=0; lok(! foi);
+	  foi = false; a['a11']=0; lok(foi);
+	  foi = false; a[11]=0; lok(foi);
+	  foi = false; a[1]=null; lok(! foi);
+	  foi = false; a[1]=null; lok(foi);
+	}
+
+
+	function f (t, ...) { return t, {...}; }
+	t.__call = f;
+
+	{
+	  var x,y = a(unpack({'a', 1}));
+	  lok(x==a && y[1]=='a' && y[2]==1 && y[3]==null);
+	  x,y = a();
+	  lok(x==a && y[1]==null);
+	}
+
+
+	var b = setmetatable({}, t);
+	setmetatable(b,t);
+
+	function f(op) {
+	  return function (...) { cap = {[0] = op, ...} ; return (...); };
+	}
+	t.__add = f("add");
+	t.__sub = f("sub");
+	t.__mul = f("mul");
+	t.__div = f("div");
+	t.__mod = f("mod");
+	t.__unm = f("unm");
+	t.__pow = f("pow");
+
+	lok(b+5 == b);
+	lok(cap[0] == "add" && cap[1] == b && cap[2] == 5 && cap[3]==null);
+	lok(b+'5' == b);
+	lok(cap[0] == "add" && cap[1] == b && cap[2] == '5' && cap[3]==null);
+	lok(5+b == 5);
+	lok(cap[0] == "add" && cap[1] == 5 && cap[2] == b && cap[3]==null);
+	lok('5'+b == '5');
+	lok(cap[0] == "add" && cap[1] == '5' && cap[2] == b && cap[3]==null);
+	b-=3; lok(getmetatable(b) == t);
+	lok(5-a == 5);
+	lok(cap[0] == "sub" && cap[1] == 5 && cap[2] == a && cap[3]==null);
+	lok('5'-a == '5');
+	lok(cap[0] == "sub" && cap[1] == '5' && cap[2] == a && cap[3]==null);
+	lok(a*a == a);
+	lok(cap[0] == "mul" && cap[1] == a && cap[2] == a && cap[3]==null);
+	lok(a/0 == a);
+	lok(cap[0] == "div" && cap[1] == a && cap[2] == 0 && cap[3]==null);
+	lok(a%2 == a);
+	lok(cap[0] == "mod" && cap[1] == a && cap[2] == 2 && cap[3]==null);
+	lok(-a == a);
+	lok(cap[0] == "unm" && cap[1] == a);
+	lok(a**4 == a);
+	lok(cap[0] == "pow" && cap[1] == a && cap[2] == 4 && cap[3]==null);
+	lok(a**'4' == a);
+	lok(cap[0] == "pow" && cap[1] == a && cap[2] == '4' && cap[3]==null);
+	lok(4**a == 4);
+	lok(cap[0] == "pow" && cap[1] == 4 && cap[2] == a && cap[3]==null);
+	lok('4'**a == '4');
+	lok(cap[0] == "pow" && cap[1] == '4' && cap[2] == a && cap[3]==null);
+
+
+	t = {};
+	t.__lt = function (a,b,c) {
+	  collectgarbage();
+	  lok(c == null);
+	  if( type(a) == 'table' ) { a = a.x; }
+	  if( type(b) == 'table' ) { b = b.x; }
+	 return a<b, "dummy";
+	};
+
+	function Op(x) { return setmetatable({x=x}, t); }
+
+	var function test () {
+	  lok(!(Op(1)<Op(1)) && (Op(1)<Op(2)) && !(Op(2)<Op(1)));
+	  lok(!(Op('a')<Op('a')) && (Op('a')<Op('b')) && !(Op('b')<Op('a')));
+	  lok((Op(1)<=Op(1)) && (Op(1)<=Op(2)) && !(Op(2)<=Op(1)));
+	  lok((Op('a')<=Op('a')) && (Op('a')<=Op('b')) && !(Op('b')<=Op('a')));
+	  lok(!(Op(1)>Op(1)) && !(Op(1)>Op(2)) && (Op(2)>Op(1)));
+	  lok(!(Op('a')>Op('a')) && !(Op('a')>Op('b')) && (Op('b')>Op('a')));
+	  lok((Op(1)>=Op(1)) && !(Op(1)>=Op(2)) && (Op(2)>=Op(1)));
+	  lok((Op('a')>=Op('a')) && !(Op('a')>=Op('b')) && (Op('b')>=Op('a')));
+	}
+
+	test();
+
+	t.__le = function (a,b,c) {
+	  lok(c == null);
+	  if( type(a) == 'table' ) { a = a.x; }
+	  if( type(b) == 'table' ) { b = b.x; }
+	 return a<=b, "dummy";
+	};
+
+	test();  // retest comparisons, now using both `lt' and `le'
+
+
+	// test `partial order'
+
+	var function Set(x) {
+	  var y = {};
+	  for( _,k in pairs(x) ) { y[k] = 1; }
+	  return setmetatable(y, t);
+	}
+
+	t.__lt = function (a,b) {
+	  for( k in pairs(a) ) {
+	    if( ! b[k] ) { return false; }
+	    b[k] = null;
+	  }
+	  return next(b) != null;
+	};
+
+	t.__le = null;
+
+	lok(Set({1,2,3}) < Set({1,2,3,4}));
+	lok(!(Set({1,2,3,4}) < Set({1,2,3,4})));
+	lok((Set({1,2,3,4}) <= Set({1,2,3,4})));
+	lok((Set({1,2,3,4}) >= Set({1,2,3,4})));
+	lok((Set({1,3}) <= Set({3,5})));   // wrong!! model needs a `le' method ;-)
+
+	t.__le = function (a,b) {
+	  for( k in pairs(a) ) {
+	    if( ! b[k] ) { return false; }
+	  }
+	  return true;
+	};
+
+	lok(! (Set({1,3}) <= Set({3,5})));   // now its OK!
+	lok(!(Set({1,3}) <= Set({3,5})));
+	lok(!(Set({1,3}) >= Set({3,5})));
+
+	t.__eq = function (a,b) {
+	  for( k in pairs(a) ) {
+	    if( ! b[k] ) { return false; }
+	    b[k] = null;
+	  }
+	  return next(b) == null;
+	};
+
+	var s = Set({1,3,5});
+	lok(s == Set({3,5,1}));
+	lok(! rawequal(s, Set({3,5,1})));
+	lok(rawequal(s, s));
+	lok(Set({1,3,5,1}) == Set({3,5,1}));
+	lok(Set({1,3,5}) != Set({3,5,1,6}));
+	t[Set({1,3,5})] = 1;
+	lok(t[Set({1,3,5})] == null);   // `__eq' is not valid for table accesses
+
+
+	t.__concat = function (a,b,c) {
+	  lok(c == null);
+	  if( type(a) == 'table' ) { a = a.val; }
+	  if( type(b) == 'table' ) { b = b.val; }
+	  if( A ) { return a..b;
+	  } else {
+	    return setmetatable({val=a..b}, t);
+	  }
+	};
+
+	c = {val="c"}; setmetatable(c, t);
+	d = {val="d"}; setmetatable(d, t);
+
+	A = true;
+	lok(c..d == 'cd');
+	lok(0 .."a".."b"..c..d.."e".."f"..(5+3).."g" == "0abcdef8g");
+
+	A = false;
+	x = c..d;
+	lok(getmetatable(x) == t && x.val == 'cd');
+	x = 0 .."a".."b"..c..d.."e".."f".."g";
+	lok(x.val == "0abcdefg");
+
+
+	// test comparison compatibilities
+	var t1, t2, d;
+	t1 = {};  c = {}; setmetatable(c, t1);
+	d = {};
+	t1.__eq = function () { return true; };
+	t1.__lt = function () { return true; };
+	if( onLuajit )
+		lok(c != d && pcall(function () { return c < d; }));
+	else
+		lok(c != d && ! pcall(function () { return c < d; }));
+	setmetatable(d, t1);
+	lok(c == d && c < d && !(d <= c));
+	t2 = {};
+	t2.__eq = t1.__eq;
+	t2.__lt = t1.__lt;
+	setmetatable(d, t2);
+	lok(c == d && c < d && !(d <= c));
+
+
+
+	// test for several levels of calls
+	var i;
+	var tt = {
+	  __call = function (t, ...) {
+	    i += 1;
+	    if( t.f ) { return t.f(...);
+	    } else { return {...};
+	    }
+	  }
+	};
+
+	a = setmetatable({}, tt);
+	b = setmetatable({f=a}, tt);
+	c = setmetatable({f=b}, tt);
+
+	i = 0;
+	x = c(3,4,5);
+	lok(i == 3 && x[1] == 3 && x[3] == 5);
+
+
+	lok(_G.X == 20);
+	lok(_G == getfenv(0));
+
+	var _g = _G;
+	setfenv(1, setmetatable({}, {__index=function (_,k) { return _g[k]; }}));
+
+	// testing proxies
+	lok(getmetatable(newproxy()) == null);
+	lok(getmetatable(newproxy(false)) == null);
+
+	var u = newproxy(true);
+
+	getmetatable(u).__newindex = function (u,k,v) {
+	  getmetatable(u)[k] = v;
+	};
+
+	getmetatable(u).__index = function (u,k) {
+	  return getmetatable(u)[k];
+	};
+
+	for( i=1,10 ) { u[i] = i; }
+	for( i=1,10 ) { lok(u[i] == i); }
+
+	var k = newproxy(u);
+	lok(getmetatable(k) == getmetatable(u));
+
+
+	a = {};
+	rawset(a, "x", 1, 2, 3);
+	lok(a.x == 1 && rawget(a, "x", 3) == 1);
+
+	// testing metatables for basic types
+	mt = {};
+	debug.setmetatable(10, mt);
+	lok(getmetatable(-2) == mt);
+	mt.__index = function (a,b) { return a+b; };
+	lok((10)[3] == 13);
+	lok((10)["3"] == 13);
+	debug.setmetatable(23, null);
+	lok(getmetatable(-2) == null);
+
+	debug.setmetatable(true, mt);
+	lok(getmetatable(false) == mt);
+	mt.__index = function (a,b) { return a || b; };
+	lok((true)[false] == true);
+	lok((false)[false] == false);
+	debug.setmetatable(false, null);
+	lok(getmetatable(true) == null);
+
+	debug.setmetatable(null, mt);
+	lok(getmetatable(null) == mt);
+	mt.__add = function (a,b) { return (a || 0) + (b || 0); };
+	lok(10 + null == 10);
+	lok(null + 23 == 23);
+	lok(null + null == 0);
+	debug.setmetatable(null, null);
+	lok(getmetatable(null) == null);
+
+	debug.setmetatable(null, {});
+});
+
+lrun("literals", function() {
+
+	var function dostring (x) { var res = loadstring(x); lok(res); return res(); }
+
+	dostring("x = 'a\0a'");
+	lok(x == 'a\0a' && string.len(x) == 3);
+
+	// escape sequences
+	lok('\n\"\'\\' == [=[
+
+"'\]=]);
+
+	lok(string.find("\a\b\f\n\r\t\v", "^%c%c%c%c%c%c%c$"));
+
+	// assume ASCII just for tests:
+	lok("\09912" == 'c12');
+	lok("\99ab" == 'cab');
+	lok("\099" == '\99');
+	lok("\099\n" == 'c\10');
+	lok('\0\0\0alo' == '\0' .. '\0\0' .. 'alo');
+
+	lok(010 .. 020 .. -030 == "1020-30");
+
+	// long variable names
+
+	_v_var = string.rep('a', 15000);
+	prog = string.format("%s = 5", _v_var);
+	dostring(prog);
+	lok(_G[_v_var] == 5);
+	_v_var = null;
+
+	// escapes --
+	lok("\n\t" == [=[
+
+	]=]);
+	lok([=[
+
+ $debug]=] == "\n $debug");
+	lok([=[ [ ]=] != [=[ ] ]=]);
+	// long strings --
+	b = "001234567890123456789012345678901234567891234567890123456789012345678901234567890012345678901234567890123456789012345678912345678901234567890123456789012345678900123456789012345678901234567890123456789123456789012345678901234567890123456789001234567890123456789012345678901234567891234567890123456789012345678901234567890012345678901234567890123456789012345678912345678901234567890123456789012345678900123456789012345678901234567890123456789123456789012345678901234567890123456789001234567890123456789012345678901234567891234567890123456789012345678901234567890012345678901234567890123456789012345678912345678901234567890123456789012345678900123456789012345678901234567890123456789123456789012345678901234567890123456789001234567890123456789012345678901234567891234567890123456789012345678901234567890012345678901234567890123456789012345678912345678901234567890123456789012345678900123456789012345678901234567890123456789123456789012345678901234567890123456789";
+	lok(string.len(b) == 960);
+	prog = [===[
+
+	a1 = [=["isto e' um string com várias 'aspas'"]=]
+	a2 = "'aspas'"
+
+	lok(string.find(a1, a2) == 31)
+
+	a1 = [==[temp = [=[um valor qualquer]=]; ]==]
+	var res = loadstring(a1)()
+	//lok(res)
+	lok(temp == 'um valor qualquer')
+	// long strings --
+	b = "001234567890123456789012345678901234567891234567890123456789012345678901234567890012345678901234567890123456789012345678912345678901234567890123456789012345678900123456789012345678901234567890123456789123456789012345678901234567890123456789001234567890123456789012345678901234567891234567890123456789012345678901234567890012345678901234567890123456789012345678912345678901234567890123456789012345678900123456789012345678901234567890123456789123456789012345678901234567890123456789001234567890123456789012345678901234567891234567890123456789012345678901234567890012345678901234567890123456789012345678912345678901234567890123456789012345678900123456789012345678901234567890123456789123456789012345678901234567890123456789001234567890123456789012345678901234567891234567890123456789012345678901234567890012345678901234567890123456789012345678912345678901234567890123456789012345678900123456789012345678901234567890123456789123456789012345678901234567890123456789"
+	lok(string.len(b) == 960)
+
+	a = [=[00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+00123456789012345678901234567890123456789123456789012345678901234567890123456789
+]=]
+	lok(string.len(a) == 1863)
+	lok(string.sub(a, 1, 40) == string.sub(b, 1, 40))
+	x = 1
+	]===];
+
+	x = null;
+	dostring(prog);
+	lok(x);
+
+	prog = null;
+	a = null;
+	b = null;
+
+
+	// testing line ends
+	prog = [===[
+	a = 1        // a comment
+	b = 2
+
+
+	x = [=[
+hi
+]=]
+	y = "\
+hello\r\n\
+"
+	return debug.getinfo(1).currentline
+	]===];
+
+	for( _, n in pairs({"\n", "\r", "\n\r", "\r\n"}) ) {
+	  var prog, nn = string.gsub(prog, "\n", n);
+	  lok(dostring(prog) == nn);
+	  lok(_G.x == "hi\n" && _G.y == "\nhello\r\n\n");
+	}
+
+
+	// testing comments and strings with long brackets
+	a = [==[]=]==];
+	lok(a == "]=");
+
+	a = [==[[===[[=[]]=][====[]]===]===]==];
+	lok(a == "[===[[=[]]=][====[]]===]===");
+
+	a = [====[[===[[=[]]=][====[]]===]===]====]
+	lok(a == "[===[[=[]]=][====[]]===]===")
+
+	a = [=[]]]]]]]]]=];
+	lok(a == "]]]]]]]]");
+
+
+	/*
+x y z [==[ blu foo
+]==
+]
+]=]==]
+error error]=*/
+
+	// generate all strings of four of these chars
+	var x = {"=", "[", "]", "\n"};
+	var len = 4;
+	var function gen (c, n) {
+	  if( n==0 ) { coroutine.yield(c);
+	  } else {
+	    for( _, a in pairs(x) ) {
+	      gen(c..a, n-1);
+	    }
+	  }
+	}
+
+	for( s in coroutine.wrap(function () { gen("", len); }) ) {
+	  lok(s == loadstring("return [====[\n"..s.."]====]")());
+	}
+
+
+	// testing decimal point locale
+	if( os.setlocale("pt_BR") || os.setlocale("ptb") ) {
+	  lok(tonumber("3,4") == 3.4 && tonumber("3.4") == null);
+	  lok(lok(loadstring("return 3.4"))() == 3.4);
+	  lok(lok(loadstring("return .4,3"))() == .4);
+	  lok(lok(loadstring("return 4."))() == 4.);
+	  lok(lok(loadstring("return 4.+.5"))() == 4.5);
+	  var a,b = loadstring("return 4.5.");
+	  lok(string.find(b, "'4%.5%.'"));
+	  lok(os.setlocale("C"));
+	}
+
+});
+
+lrun("tables,next,for", function() {
+	var a = {};
+
+	// make sure table has lots of space in hash part
+	for( i=1,100 ) { a[i.."+"] = true; }
+	for( i=1,100 ) { a[i.."+"] = null; }
+	// fill hash part with numeric indices testing size operator
+	for( i=1,100 ) {
+	  a[i] = true;
+	  lok(#a == i);
+	}
+
+
+	if( T ) {
+	// testing table sizes
+
+	var l2 = math.log(2);
+	var function log2 (x) { return math.log(x)/l2; }
+
+	var function mp2 (n) {   // minimum power of 2 >= n
+	  var mp = 2**math.ceil(log2(n));
+	  lok(n == 0 || (mp/2 < n && n <= mp));
+	  return mp;
+	}
+
+	var function fb (n) {
+	  var r, nn = T.int2fb(n);
+	  lok(r < 256);
+	  return nn;
+	}
+
+	// test fb function
+	var a = 1;
+	var lim = 2**30;
+	while( a < lim ) {
+	  var n = fb(a);
+	  lok(a <= n && n <= a*1.125);
+	  a = math.ceil(a*1.3);
+	}
+
+	 
+	var function check (t, na, nh) {
+	  var a, h = T.querytab(t);
+	  if( a != na || h != nh ) {
+	    print(na, nh, a, h);
+	    lok(null);
+	  }
+	}
+
+	// testing constructor sizes
+	lim = 40;
+	var s = 'return {';
+	for( i=1,lim ) {
+	  s = s..i..',';
+	  var s = s;
+	  for( k=0,lim ) { 
+	    var t = loadstring(s..'}')();
+	    lok(#t == i);
+	    check(t, fb(i), mp2(k));
+	    s = string.format('%sa%d=%d,', s, k, k);
+	  }
+	}
+
+
+	// tests with unknown number of elements
+	a = {};
+	for( i=1,lim ) { a[i] = i; }   // build auxiliary table
+	for( k=0,lim ) {
+	  var a = {unpack(a,1,k)};
+	  lok(#a == k);
+	  check(a, k, 0);
+	  a = {1,2,3,unpack(a,1,k)};
+	  check(a, k+3, 0);
+	  lok(#a == k + 3);
+	}
+
+
+	// testing tables dynamically built
+	lim = 130;
+	a = {}; a[2] = 1; check(a, 0, 1);
+	a = {}; a[0] = 1; check(a, 0, 1); a[2] = 1; check(a, 0, 2);
+	a = {}; a[0] = 1; a[1] = 1; check(a, 1, 1);
+	a = {};
+	for( i = 1,lim ) {
+	  a[i] = 1;
+	  lok(#a == i);
+	  check(a, mp2(i), 0);
+	}
+
+	a = {};
+	for( i = 1,lim ) {
+	  a['a'..i] = 1;
+	  lok(#a == 0);
+	  check(a, 0, mp2(i));
+	}
+
+	a = {};
+	for( i=1,16 ) { a[i] = i; }
+	check(a, 16, 0);
+	for( i=1,11 ) { a[i] = null; }
+	for( i=30,40 ) { a[i] = null; }   // force a rehash (?)
+	check(a, 0, 8);
+	a[10] = 1;
+	for( i=30,40 ) { a[i] = null; }   // force a rehash (?)
+	check(a, 0, 8);
+	for( i=1,14 ) { a[i] = null; }
+	for( i=30,50 ) { a[i] = null; }   // force a rehash (?)
+	check(a, 0, 4);
+
+	// reverse filling
+	for( i=1,lim ) {
+	  var a = {};
+	  for( i=i,1,-1 ) { a[i] = i; }   // fill in reverse
+	  check(a, mp2(i), 0);
+	}
+
+	// size tests for vararg
+	lim = 35;
+	function foo (n, ...) {
+	  var xarg = {...};
+	  check(xarg, n, 0);
+	  lok(select('#', ...) == n);
+	  xarg[n+1] = true;
+	  check(xarg, mp2(n+1), 0);
+	  xarg.x = true;
+	  check(xarg, mp2(n+1), 1);
+	}
+	a = {};
+	for( i=1,lim ) { a[i] = true; foo(i, unpack(a)); }
+
+	}
+
+
+	// test size operation on empty tables
+	lok(#{} == 0);
+	lok(#{null} == 0);
+	lok(#{null, null} == 0);
+	lok(#{null, null, null} == 0);
+	lok(#{null, null, null, null} == 0);
+
+
+	var nofind = {};
+
+	a,b,c = 1,2,3;
+	a,b,c = null;
+
+	var function find (name) {
+	  var n,v;
+	  while( 1 ) {
+	    n,v = next(_G, n);
+	    if( ! n ) { return nofind; }
+	    lok(v != null);
+	    if( n == name ) { return v; }
+	  }
+	}
+
+	var function find1 (name) {
+	  for( n,v in pairs(_G) ) {
+	    if( n==name ) { return v; }
+	  }
+	  return null;  // not found
+	}
+
+	{   // create 10000 new global variables
+	  for( i=1,10000 ) { _G[i] = i; }
+	}
+
+
+	a = {x=90, y=8, z=23};
+	lok(table.foreach(a, function(i,v) { if( i=='x' ) { return v; } }) == 90);
+	lok(table.foreach(a, function(i,v) { if( i=='a' ) { return v; } }) == null);
+	table.foreach({}, error);
+
+	table.foreachi({x=10, y=20}, error);
+	a = {n = 1};
+	table.foreachi({n=3}, function (i, v) {
+	  lok(a.n == i && ! v);
+	  a.n=a.n+1;
+	});
+	a = {10,20,30,null,50};
+	table.foreachi(a, function (i,v) { lok(a[i] == v); });
+	lok(table.foreachi({'a', 'b', 'c'}, function (i,v) {
+		 if( i==2 ) { return v; }
+	       }) == 'b');
+
+
+	lok(print==find("print") && print == find1("print"));
+	lok(_G["print"]==find("print"));
+	lok(assert==find1("assert"));
+	lok(nofind==find("return"));
+	lok(! find1("return"));
+	_G["ret" .. "urn"] = null;
+	lok(nofind==find("return"));
+	_G["xxx"] = 1;
+	lok(xxx==find("xxx"));
+
+	a = {};
+	for( i=0,10000 ) {
+	  if( math.mod(i,10) != 0 ) {
+	    a['x'..i] = i;
+	  }
+	}
+
+	n = {n=0};
+	for( i,v in pairs(a) ) {
+	  n.n = n.n+1;
+	  lok(i && v && a[i] == v);
+	}
+	lok(n.n == 9000);
+	a = null;
+
+	// remove those 10000 new global variables
+	for( i=1,10000 ) { _G[i] = null; }
+
+	{   // clear global table
+	  var a = {};
+	  var preserve = {io = 1, string = 1, debug = 1, os = 1,
+			    coroutine = 1, table = 1, math = 1};
+	  for( n,v in pairs(_G) ) { a[n]=v; }
+	  for( n,v in pairs(a) ) {
+	    if( ! preserve[n] && type(v) != "function" &&
+	       ! string.find(n, "^[%u_]") ) {
+	     _G[n] = null;
+	    }
+	    collectgarbage();
+	  }
+	}
+
+	var function foo () {
+	  var getfenv, setfenv, lok, next =
+		getfenv, setfenv, lok, next;
+	  var n = {gl1=3};
+	  setfenv(foo, n);
+	  lok(getfenv(foo) == getfenv(1));
+	  lok(getfenv(foo) == n);
+	  lok(print == null && gl1 == 3);
+	  gl1 = null;
+	  gl = 1;
+	  lok(n.gl == 1 && next(n, 'gl') == null);
+	}
+	foo();
+
+	var function checknext (a) {
+	  var b = {};
+	  table.foreach(a, function (k,v) { b[k] = v; });
+	  for( k,v in pairs(b) ) { lok(a[k] == v); }
+	  for( k,v in pairs(a) ) { lok(b[k] == v); }
+	  b = {};
+	  { var k,v = next(a); while( k ) { b[k] = v; k,v = next(a,k); } }
+	  for( k,v in pairs(b) ) { lok(a[k] == v); }
+	  for( k,v in pairs(a) ) { lok(b[k] == v); }
+	}
+
+	checknext({1,x=1,y=2,z=3});
+	checknext({1,2,x=1,y=2,z=3});
+	checknext({1,2,3,x=1,y=2,z=3});
+	checknext({1,2,3,4,x=1,y=2,z=3});
+	checknext({1,2,3,4,5,x=1,y=2,z=3});
+
+	lok(table.getn({}) == 0);
+	lok(table.getn({[-1] = 2}) == 0);
+	lok(table.getn({1,2,3,null,null}) == 3);
+	for( i=0,40 ) {
+	  var a = {};
+	  for( j=1,i ) { a[j]=j; }
+	  lok(table.getn(a) == i);
+	}
+
+
+	lok(table.maxn({}) == 0);
+	lok(table.maxn({["1000"] = true}) == 0);
+	lok(table.maxn({["1000"] = true, [24.5] = 3}) == 24.5);
+	lok(table.maxn({[1000] = true}) == 1000);
+	lok(table.maxn({[10] = true, [100*math.pi] = print}) == 100*math.pi);
+
+
+	// int overflow
+	a = {};
+	for( i=0,50 ) { a[math.pow(2,i)] = true; }
+	lok(a[table.getn(a)]);
+
+
+	// erasing values
+	var t = {[{1}] = 1, [{2}] = 2, [string.rep("x ", 4)] = 3,
+		   [100.3] = 4, [4] = 5};
+
+	var n = 0;
+	for( k, v in pairs( t ) ) {
+	  n += 1;
+	  lok(t[k] == v);
+	  t[k] = null;
+	  collectgarbage();
+	  lok(t[k] == null);
+	}
+	lok(n == 5);
+
+
+	var function test (a) {
+	  table.insert(a, 10); table.insert(a, 2, 20);
+	  table.insert(a, 1, -1); table.insert(a, 40);
+	  table.insert(a, table.getn(a)+1, 50);
+	  table.insert(a, 2, -2);
+	  lok(table.remove(a,1) == -1);
+	  lok(table.remove(a,1) == -2);
+	  lok(table.remove(a,1) == 10);
+	  lok(table.remove(a,1) == 20);
+	  lok(table.remove(a,1) == 40);
+	  lok(table.remove(a,1) == 50);
+	  lok(table.remove(a,1) == null);
+	}
+
+	a = {n=0, [-7] = "ban"};
+	test(a);
+	lok(a.n == 0 && a[-7] == "ban");
+
+	a = {[-7] = "ban"};
+	test(a);
+	lok(a.n == null && table.getn(a) == 0 && a[-7] == "ban");
+
+
+	table.insert(a, 1, 10); table.insert(a, 1, 20); table.insert(a, 1, -1);
+	lok(table.remove(a) == 10);
+	lok(table.remove(a) == 20);
+	lok(table.remove(a) == -1);
+
+	a = {'c', 'd'};
+	table.insert(a, 3, 'a');
+	table.insert(a, 'b');
+	lok(table.remove(a, 1) == 'c');
+	lok(table.remove(a, 1) == 'd');
+	lok(table.remove(a, 1) == 'a');
+	lok(table.remove(a, 1) == 'b');
+	lok(table.getn(a) == 0 && a.n == null);
+
+	a = {};
+	for( i=1,1000 ) {
+	  a[i] = i; a[i-1] = null;
+	}
+	lok(next(a,null) == 1000 && next(a,1000) == null);
+
+	lok(next({}) == null);
+	lok(next({}, null) == null);
+
+	for( a,b in pairs({}) ) { error("not here"); }
+	for( i=1,0 ) { error('not here'); }
+	for( i=0,1,-1 ) { error('not here'); }
+	a = null; for( i=1,1 ) { lok(! a); a=1; }; lok(a);
+	a = null; for( i=1,1,-1 ) { lok(! a); a=1; }; lok(a);
+
+	a = 0; for( i=0, 1, 0.1 ) { a+=1; }; lok(a==11);
+	// precision problems
+	//a = 0; for i=1, 0, -0.01 do a=a+1 end; lok(a==101)
+	a = 0; for( i=0, 0.999999999, 0.1 ) { a+=1; }; lok(a==10);
+	a = 0; for( i=1, 1, 1 ) { a+=1; }; lok(a==1);
+	a = 0; for( i=1e10, 1e10, -1 ) { a+=1; }; lok(a==1);
+	a = 0; for( i=1, 0.99999, 1 ) { a+=1; }; lok(a==0);
+	a = 0; for( i=99999, 1e5, -1 ) { a+=1; }; lok(a==0);
+	a = 0; for( i=1, 0.99999, -1 ) { a+=1; }; lok(a==1);
+
+	// conversion
+	a = 0; for( i="10","1","-2" ) { a+=1; }; lok(a==5);
+
+
+	collectgarbage();
+
+
+	// testing generic 'for'
+
+	var function f (n, p) {
+	  var t = {}; for( i=1,p ) { t[i] = i*10; }
+	  return function (_,n) {
+		   if( n > 0 ) {
+		     n -= 1;
+		     return n, unpack(t);
+		   }
+		 }, null, n;
+	}
+
+	var x = 0;
+	for( n,a,b,c,d in f(5,3) ) {
+	  x += 1;
+	  lok(a == 10 && b == 20 && c == 30 && d == null);
+	}
+	lok(x == 5);
+});
+
+lrun("pattern matching", function() {
+
+	function f(s, p) {
+	  var i,e = string.find(s, p);
+	  if( i ) { return string.sub(s, i, e); }
+	}
+
+	function f1(s, p) {
+	  p = string.gsub(p, "%%([0-9])", function (s) { return "%" .. (s+1); });
+	  p = string.gsub(p, "^(^?)", "%1()", 1);
+	  p = string.gsub(p, "($?)$", "()%1", 1);
+	  var t = {string.match(s, p)};
+	  return string.sub(s, t[1], t[#t] - 1);
+	}
+
+	a,b = string.find('', '');    // empty patterns are tricky
+	lok(a == 1 && b == 0);
+	a,b = string.find('alo', '');
+	lok(a == 1 && b == 0);
+	a,b = string.find('a\0o a\0o a\0o', 'a', 1);   // first position
+	lok(a == 1 && b == 1);
+	a,b = string.find('a\0o a\0o a\0o', 'a\0o', 2);   // starts in the midle
+	lok(a == 5 && b == 7);
+	a,b = string.find('a\0o a\0o a\0o', 'a\0o', 9);   // starts in the midle
+	lok(a == 9 && b == 11);
+	a,b = string.find('a\0a\0a\0a\0\0ab', '\0ab', 2);  // finds at the end
+	lok(a == 9 && b == 11);
+	a,b = string.find('a\0a\0a\0a\0\0ab', 'b');    // last position
+	lok(a == 11 && b == 11);
+	lok(string.find('a\0a\0a\0a\0\0ab', 'b\0') == null);   // check ending
+	lok(string.find('', '\0') == null);
+	lok(string.find('alo123alo', '12') == 4);
+	lok(string.find('alo123alo', '^12') == null);
+
+	lok(f('aloALO', '%l*') == 'alo');
+	lok(f('aLo_ALO', '%a*') == 'aLo');
+
+	lok(f('aaab', 'a*') == 'aaa');
+	lok(f('aaa', '^.*$') == 'aaa');
+	lok(f('aaa', 'b*') == '');
+	lok(f('aaa', 'ab*a') == 'aa');
+	lok(f('aba', 'ab*a') == 'aba');
+	lok(f('aaab', 'a+') == 'aaa');
+	lok(f('aaa', '^.+$') == 'aaa');
+	lok(f('aaa', 'b+') == null);
+	lok(f('aaa', 'ab+a') == null);
+	lok(f('aba', 'ab+a') == 'aba');
+	lok(f('a$a', '.$') == 'a');
+	lok(f('a$a', '.%$') == 'a$');
+	lok(f('a$a', '.$.') == 'a$a');
+	lok(f('a$a', '$$') == null);
+	lok(f('a$b', 'a$') == null);
+	lok(f('a$a', '$') == '');
+	lok(f('', 'b*') == '');
+	lok(f('aaa', 'bb*') == null);
+	lok(f('aaab', 'a-') == '');
+	lok(f('aaa', '^.-$') == 'aaa');
+	lok(f('aabaaabaaabaaaba', 'b.*b') == 'baaabaaabaaab');
+	lok(f('aabaaabaaabaaaba', 'b.-b') == 'baaab');
+	lok(f('alo xo', '.o$') == 'xo');
+	lok(f(' \n isto é assim', '%S%S*') == 'isto');
+	lok(f(' \n isto é assim', '%S*$') == 'assim');
+	lok(f(' \n isto é assim', '[a-z]*$') == 'assim');
+	lok(f('um caracter ? extra', '[^%sa-z]') == '?');
+	lok(f('', 'a?') == '');
+	lok(f('á', 'á?') == 'á');
+	lok(f('ábl', 'á?b?l?') == 'ábl');
+	lok(f('  ábl', 'á?b?l?') == '');
+	lok(f('aa', '^aa?a?a') == 'aa');
+	lok(f(']]]áb', '[^]]') == 'á');
+	lok(f("0alo alo", "%x*") == "0a");
+	lok(f("alo alo", "%C+") == "alo alo");
+
+	lok(f1('alo alx 123 b\0o b\0o', '(..*) %1') == "b\0o b\0o");
+	lok(f1('axz123= 4= 4 34', '(.+)=(.*)=%2 %1') == '3= 4= 4 3');
+	lok(f1('=======', '^(=*)=%1$') == '=======');
+	lok(string.match('==========', '^([=]*)=%1$') == null);
+
+	var function range (i, j) {
+	  if( i <= j ) {
+	    return i, range(i+1, j);
+	  }
+	}
+
+	var abc = string.char(range(0, 255));
+
+	lok(string.len(abc) == 256);
+
+	function strset (p) {
+	  var res = {s=''};
+	  string.gsub(abc, p, function (c) { res.s = res.s .. c; });
+	  return res.s;
+	};
+
+	lok(string.len(strset('[\200-\210]')) == 11);
+
+	lok(strset('[a-z]') == "abcdefghijklmnopqrstuvwxyz");
+	lok(strset('[a-z%d]') == strset('[%da-uu-z]'));
+	lok(strset('[a-]') == "-a");
+	lok(strset('[^%W]') == strset('[%w]'));
+	lok(strset('[]%%]') == '%]');
+	lok(strset('[a%-z]') == '-az');
+	lok(strset('[%^%[%-a%]%-b]') == '-[]^ab');
+	lok(strset('%Z') == strset('[\1-\255]'));
+	lok(strset('.') == strset('[\1-\255%z]'));
+
+	lok(string.match("alo xyzK", "(%w+)K") == "xyz");
+	lok(string.match("254 K", "(%d*)K") == "");
+	lok(string.match("alo ", "(%w*)$") == "");
+	lok(string.match("alo ", "(%w+)$") == null);
+	lok(string.find("(álo)", "%(á") == 1);
+	var a, b, c, d, e = string.match("âlo alo", "^(((.).).* (%w*))$");
+	lok(a == 'âlo alo' && b == 'âl' && c == 'â' && d == 'alo' && e == null);
+	a, b, c, d  = string.match('0123456789', '(.+(.?)())');
+	lok(a == '0123456789' && b == '' && c == 11 && d == null);
+
+	lok(string.gsub('ülo ülo', 'ü', 'x') == 'xlo xlo');
+	lok(string.gsub('alo úlo  ', ' +$', '') == 'alo úlo');  // trim
+	lok(string.gsub('  alo alo  ', '^%s*(.-)%s*$', '%1') == 'alo alo');  // double trim
+	lok(string.gsub('alo  alo  \n 123\n ', '%s+', ' ') == 'alo alo 123 ');
+	t = "abç d";
+	a, b = string.gsub(t, '(.)', '%1@');
+	lok('@'..a == string.gsub(t, '', '@') && b == 5);
+	a, b = string.gsub('abçd', '(.)', '%0@', 2);
+	lok(a == 'a@b@çd' && b == 2);
+	lok(string.gsub('alo alo', '()[al]', '%1') == '12o 56o');
+	lok(string.gsub("abc=xyz", "(%w*)(%p)(%w+)", "%3%2%1-%0") ==
+		      "xyz=abc-abc=xyz");
+	lok(string.gsub("abc", "%w", "%1%0") == "aabbcc");
+	lok(string.gsub("abc", "%w+", "%0%1") == "abcabc");
+	lok(string.gsub('áéí', '$', '\0óú') == 'áéí\0óú');
+	lok(string.gsub('', '^', 'r') == 'r');
+	lok(string.gsub('', '$', 'r') == 'r');
+
+	lok(string.gsub("um (dois) tres (quatro)", "(%(%w+%))", string.upper) ==
+		    "um (DOIS) tres (QUATRO)");
+
+	{
+	  var function setglobal (n,v) { rawset(_G, n, v); }
+	  string.gsub("a=roberto,roberto=a", "(%w+)=(%w%w*)", setglobal);
+	  lok(_G.a=="roberto" && _G.roberto=="a");
+	}
+
+	function f(a,b) { return string.gsub(a,'.',b); }
+	lok(string.gsub("trocar tudo em |teste|b| é |beleza|al|", "|([^|]*)|([^|]*)|", f) ==
+		    "trocar tudo em bbbbb é alalalalalal");
+
+	var function dostring (s) { return loadstring(s)() || ""; }
+	lok(string.gsub("alo $a=1$ novamente $return a$", "$([^$]*)%$", dostring) ==
+		    "alo  novamente 1");
+
+	x = string.gsub("$x=string.gsub('alo', '.', string.upper)$ assim vai para $return x$",
+		 "$([^$]*)%$", dostring);
+	lok(x == ' assim vai para ALO');
+
+	t = {};
+	s = 'a alo jose  joao';
+	r = string.gsub(s, '()(%w+)()', function (a,w,b) {
+	      lok(string.len(w) == b-a);
+	      t[a] = b-a;
+	    });
+	lok(s == r && t[1] == 1 && t[3] == 3 && t[7] == 4 && t[13] == 4);
+
+
+	function isbalanced (s) {
+	  return string.find(string.gsub(s, "%b()", ""), "[()]") == null;
+	}
+
+	lok(isbalanced("(9 ((8))(\0) 7) \0\0 a b ()(c)() a"));
+	lok(! isbalanced("(9 ((8) 7) a b (\0 c) a"));
+	lok(string.gsub("alo 'oi' alo", "%b''", '"') == 'alo " alo');
+
+
+	var t = {"apple", "orange", "lime"; n=0};
+	lok(string.gsub("x and x and x", "x", function () { t.n=t.n+1; return t[t.n]; })
+		== "apple and orange and lime");
+
+	t = {n=0};
+	string.gsub("first second word", "%w%w*", function (w) { t.n=t.n+1; t[t.n] = w; });
+	lok(t[1] == "first" && t[2] == "second" && t[3] == "word" && t.n == 3);
+
+	t = {n=0};
+	lok(string.gsub("first second word", "%w+",
+		 function (w) { t.n=t.n+1; t[t.n] = w; }, 2) == "first second word");
+	lok(t[1] == "first" && t[2] == "second" && t[3] == null);
+
+	lok(! pcall(string.gsub, "alo", "(.", print));
+	lok(! pcall(string.gsub, "alo", ".)", print));
+	lok(! pcall(string.gsub, "alo", "(.", {}));
+	lok(! pcall(string.gsub, "alo", "(.)", "%2"));
+	lok(! pcall(string.gsub, "alo", "(%1)", "a"));
+	lok(! pcall(string.gsub, "alo", "(%0)", "a"));
+
+	// big strings
+	a = string.rep('a', 300000);
+	lok(string.find(a, '^a*.?$'));
+	lok(! string.find(a, '^a*.?b$'));
+	lok(string.find(a, '^a-.?$'));
+
+	// deep nest of gsubs
+	function rev (s) {
+	  return string.gsub(s, "(.)(.+)", function (c,s1) { return rev(s1)..c; });
+	}
+
+	var x = string.rep('012345', 10);
+	lok(rev(rev(x)) == x);
+
+
+	// gsub with tables
+	lok(string.gsub("alo alo", ".", {}) == "alo alo");
+	lok(string.gsub("alo alo", "(.)", {a="AA", l=""}) == "AAo AAo");
+	lok(string.gsub("alo alo", "(.).", {a="AA", l="K"}) == "AAo AAo");
+	lok(string.gsub("alo alo", "((.)(.?))", {al="AA", o=false}) == "AAo AAo");
+
+	lok(string.gsub("alo alo", "().", {2,5,6}) == "256 alo");
+
+	t = {}; setmetatable(t, {__index = function (t,s) { return string.upper(s); }});
+	lok(string.gsub("a alo b hi", "%w%w+", t) == "a ALO b HI");
+
+
+	// tests for gmatch
+	if( !onLuajit ) lok(string.gfind == string.gmatch);
+	a = 0;
+	for( i in string.gmatch('abcde', '()') ) { lok(i == a+1); a=i; }
+	lok(a==6);
+
+	t = {n=0};
+	for( w in string.gmatch("first second word", "%w+") ) {
+	      t.n=t.n+1; t[t.n] = w;
+	}
+	lok(t[1] == "first" && t[2] == "second" && t[3] == "word");
+
+	t = {3, 6, 9};
+	for( i in string.gmatch ("xuxx uu ppar r", "()(.)%2") ) {
+	  lok(i == table.remove(t, 1));
+	}
+	lok(table.getn(t) == 0);
+
+	t = {};
+	for( i,j in string.gmatch("13 14 10 = 11, 15= 16, 22=23", "(%d+)%s*=%s*(%d+)") ) {
+	  t[i] = j;
+	}
+	a = 0;
+	for( k,v in pairs(t) ) { lok(k+1 == v+0); a+=1; }
+	lok(a == 3);
+
+
+	// tests for `%f' (`frontiers')
+
+	lok(string.gsub("aaa aa a aaa a", "%f[%w]a", "x") == "xaa xa x xaa x");
+	lok(string.gsub("[[]] [][] [[[[", "%f[[].", "x") == "x[]] x]x] x[[[");
+	lok(string.gsub("01abc45de3", "%f[%d]", ".") == ".01abc.45de.3");
+	lok(string.gsub("01abc45 de3x", "%f[%D]%w", ".") == "01.bc45 de3.");
+	lok(string.gsub("function", "%f[\1-\255]%w", ".") == ".unction");
+	lok(string.gsub("function", "%f[^\1-\255]", ".") == "function.");
+
+	var i;
+	i, e = string.find(" alo aalo allo", "%f[%S].-%f[%s].-%f[%S]");
+	lok(i == 2 && e == 5);
+	var k = string.match(" alo aalo allo", "%f[%S](.-%f[%s].-%f[%S])");
+	lok(k == 'alo ');
+
+	a = {1, 5, 9, 14, 17,};
+	for( k in string.gmatch("alo alo th02 is 1hat", "()%f[%w%d]") ) {
+	  lok(table.remove(a, 1) == k);
+	}
+	lok(table.getn(a) == 0);
+
+});
+
+lrun("table sort", function() {
+
+	function check (a, f) {
+	  f = f || function (x,y) { return x<y; };
+	  for( n=table.getn(a),2,-1 ) {
+	    lok(! f(a[n], a[n-1]));
+	  }
+	}
+
+	a = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep",
+	     "Oct", "Nov", "Dec"};
+
+	table.sort(a);
+	check(a);
+
+	limit = 30000;
+	if( rawget(_G, "_soft") ) { limit = 5000; }
+
+	a = {};
+	for( i=1,limit ) {
+	  a[i] = math.random();
+	}
+
+	var x = os.clock();
+	table.sort(a);
+	//print(string.format("Sorting %d elements in %.2f sec.", limit, os.clock()-x))
+	check(a);
+
+	x = os.clock();
+	table.sort(a);
+	//print(string.format("Re-sorting %d elements in %.2f sec.", limit, os.clock()-x))
+	check(a);
+
+	a = {};
+	for( i=1,limit ) {
+	  a[i] = math.random();
+	}
+
+	x = os.clock(); i=0;
+	table.sort(a, function(x,y) { i+=1; return y<x; });
+	//print(string.format("Invert-sorting other %d elements in %.2f sec., with %i comparisons",
+	//      limit, os.clock()-x, i))
+	check(a, function(x,y) { return y<x; });
+
+
+	table.sort({});  // empty array
+
+	for( i=1,limit ) { a[i] = false; }
+	x = os.clock();
+	table.sort(a, function(x,y) { return null; });
+	//print(string.format("Sorting %d equal elements in %.2f sec.", limit, os.clock()-x))
+	check(a, function(x,y) { return null; });
+	for( i,v in pairs(a) ) { lok(! v || i=='n' && v==limit); }
+
+	a = {"álo", "\0first :-)", "alo", "then this one", "45", "and a new"};
+	table.sort(a);
+	check(a);
+
+	table.sort(a, function (x, y) {
+		  loadstring(string.format("a[%q] = ''", x))();
+		  collectgarbage();
+		  return x<y;
+		});
+
+
+	tt = {__lt = function (a,b) { return a.val < b.val; }};
+	a = {};
+	for( i=1,10 ) {  a[i] = {val=math.random(100)}; setmetatable(a[i], tt); }
+	table.sort(a);
+	check(a, tt.__lt);
+	check(a);
+
+});
+
+lrun("vararg", function() {
+
+	_G.arg = null;
+
+	function f(a, ...) {
+	  lok(type(arg) == 'table');
+	  lok(type(arg.n) == 'number');
+	  for( i=1,arg.n ) { lok(a[i]==arg[i]); }
+	  return arg.n;
+	}
+
+	function c12 (...) {
+	  lok(arg == null);
+	  var x = {...}; x.n = table.getn(x);
+	  var res = (x.n==2 && x[1] == 1 && x[2] == 2);
+	  if( res ) { res = 55; }
+	  return res, 2;
+	}
+
+	if( onLuajit )
+		function vararg (...) { var x = {...}; x.n = table.getn(x); return x; }
+	else
+		function vararg (...) { return arg; }
+
+	var call = function (f, args) { return f(unpack(args, 1, args.n)); };
+
+	if( !onLuajit ) {
+		lok(f() == 0);
+		lok(f({1,2,3}, 1, 2, 3) == 3);
+		lok(f({"alo", null, 45, f, null}, "alo", null, 45, f, null) == 5);
+	}
+
+	lok(c12(1,2)==55);
+	a,b = call(c12, {1,2});
+	lok(a == 55 && b == 2);
+	a = call(c12, {1,2;n=2});
+	lok(a == 55 && b == 2);
+	a = call(c12, {1,2;n=1});
+	lok(! a);
+	lok(c12(1,2,3) == false);
+	var a = vararg(call(next, {_G,null;n=2}));
+	var b,c = next(_G);
+	lok(a[1] == b && a[2] == c && a.n == 2);
+	a = vararg(call(call, {c12, {1,2}}));
+	lok(a.n == 2 && a[1] == 55 && a[2] == 2);
+	//a = call(print, {'+'})
+	//lok(a == null)
+
+	var t = {1, 10};
+	function t::f (...) { return this[arg[1]]+arg.n; }
+	if( !onLuajit ) lok(t->f(1,4) == 3 && t->f(2) == 11);
+
+	lim = 20;
+	var i;
+	i, a = 1, {};
+	while( i <= lim ) { a[i] = i+0.3; i+=1; }
+
+	function f(a, b, c, d, ...) {
+	  var more = {...};
+	  lok(a == 1.3 && more[1] == 5.3 &&
+		 more[lim-4] == lim+0.3 && ! more[lim-3]);
+	}
+
+	function g(a,b,c) {
+	  lok(a == 1.3 && b == 2.3 && c == 3.3);
+	}
+
+	call(f, a);
+	call(g, a);
+
+	a = {};
+	i = 1;
+	while( i <= lim ) { a[i] = i; i+=1; }
+	lok(call(math.max, a) == lim);
+
+
+	// new-style varargs
+
+	function oneless (a, ...) { return ...; }
+
+	function f (n, a, ...) {
+	  var b;
+	  lok(arg == null);
+	  if( n == 0 ) {
+	    var b, c, d = ...;
+	    return a, b, c, d, oneless(oneless(oneless(...)));
+	  } else {
+	    n, b, a = n-1, ..., a;
+	    lok(b == ...);
+	    return f(n, a, ...);
+	  }
+	}
+
+	a,b,c,d,e = f(10,5,4,3,2,1);
+	lok(a==5 && b==4 && c==3 && d==2 && e==1);
+
+	a,b,c,d,e = f(4);
+	lok(a==null && b==null && c==null && d==null && e==null);
+
+
+	// varargs for main chunks
+	f = loadstring([=[ return {...} ]=]);
+	x = f(2,3);
+	lok(x[1] == 2 && x[2] == 3 && x[3] == null);
+
+
+	f = loadstring([=[
+	  var x = {...}
+	  for( i=1,select('#', ...) ) { lok(x[i] == select(i, ...)) }
+	  lok(x[select('#', ...)+1] == null)
+	  return true
+	]=]);
+
+	lok(f("a", "b", null, {}, assert));
+	lok(f());
+
+	a = {select(3, unpack({10,20,30,40}))};
+	lok(table.getn(a) == 2 && a[1] == 30 && a[2] == 40);
+	a = {select(1)};
+	lok(next(a) == null);
+	a = {select(-1, 3, 5, 7)};
+	lok(a[1] == 7 && a[2] == null);
+	a = {select(-2, 3, 5, 7)};
+	lok(a[1] == 5 && a[2] == 7 && a[3] == null);
+	pcall(select, 10000);
+	pcall(select, -10000);
+
+});
+
+lrun("big", function() {
+
+	//local longs = string.rep("\0", 2^25)
+	var longs = string.rep("\0", 2**10);
+	var function catter (i) {
+	  return loadstring(
+	    string.format("return function(a) {return a%s }",
+			     string.rep("..a", i-1)))();
+	}
+	rep129 = catter(129);
+	var a, b = pcall(rep129, longs);
+	//lok(not a and string.find(b, "overflow"))
+
+
+	//require "checktable"
+
+/* lots of empty lines (to force SETLINEW)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--*/
+
+
+	a,b = null,null;
+	while( ! b ) {
+		if( a ) {
+			b = {  // lots of strings (to force JMPW and PUSHCONSTANTW)
+			"n1", "n2", "n3", "n4", "n5", "n6", "n7", "n8", "n9", "n10",
+			"n11", "n12", "j301", "j302", "j303", "j304", "j305", "j306", "j307", "j308",
+			"j309", "a310", "n311", "n312", "n313", "n314", "n315", "n316", "n317", "n318",
+			"n319", "n320", "n321", "n322", "n323", "n324", "n325", "n326", "n327", "n328",
+			"a329", "n330", "n331", "n332", "n333", "n334", "n335", "n336", "n337", "n338",
+			"n339", "n340", "n341", "z342", "n343", "n344", "n345", "n346", "n347", "n348",
+			"n349", "n350", "n351", "n352", "r353", "n354", "n355", "n356", "n357", "n358",
+			"n359", "n360", "n361", "n362", "n363", "n364", "n365", "n366", "z367", "n368",
+			"n369", "n370", "n371", "n372", "n373", "n374", "n375", "a376", "n377", "n378",
+			"n379", "n380", "n381", "n382", "n383", "n384", "n385", "n386", "n387", "n388",
+			"n389", "n390", "n391", "n392", "n393", "n394", "n395", "n396", "n397", "n398",
+			"n399", "n400", "n13", "n14", "n15", "n16", "n17", "n18", "n19", "n20",
+			"n21", "n22", "n23", "a24", "n25", "n26", "n27", "n28", "n29", "j30",
+			"n31", "n32", "n33", "n34", "n35", "n36", "n37", "n38", "n39", "n40",
+			"n41", "n42", "n43", "n44", "n45", "n46", "n47", "n48", "n49", "n50",
+			"n51", "n52", "n53", "n54", "n55", "n56", "n57", "n58", "n59", "n60",
+			"n61", "n62", "n63", "n64", "n65", "a66", "z67", "n68", "n69", "n70",
+			"n71", "n72", "n73", "n74", "n75", "n76", "n77", "n78", "n79", "n80",
+			"n81", "n82", "n83", "n84", "n85", "n86", "n87", "n88", "n89", "n90",
+			"n91", "n92", "n93", "n94", "n95", "n96", "n97", "n98", "n99", "n100",
+			"n201", "n202", "n203", "n204", "n205", "n206", "n207", "n208", "n209", "n210",
+			"n211", "n212", "n213", "n214", "n215", "n216", "n217", "n218", "n219", "n220",
+			"n221", "n222", "n223", "n224", "n225", "n226", "n227", "n228", "n229", "n230",
+			"n231", "n232", "n233", "n234", "n235", "n236", "n237", "n238", "n239", "a240",
+			"a241", "a242", "a243", "a244", "a245", "a246", "a247", "a248", "a249", "n250",
+			"n251", "n252", "n253", "n254", "n255", "n256", "n257", "n258", "n259", "n260",
+			"n261", "n262", "n263", "n264", "n265", "n266", "n267", "n268", "n269", "n270",
+			"n271", "n272", "n273", "n274", "n275", "n276", "n277", "n278", "n279", "n280",
+			"n281", "n282", "n283", "n284", "n285", "n286", "n287", "n288", "n289", "n290",
+			"n291", "n292", "n293", "n294", "n295", "n296", "n297", "n298", "n299"
+			; x=23};
+		} else { a = 1; }
+	}
+
+	lok(b.x == 23);
+
+	//stat(b)
+
+	do {
+		a = {
+		n1 = 1.5, n2 = 2.5, n3 = 3.5, n4 = 4.5, n5 = 5.5, n6 = 6.5, n7 = 7.5,
+		n8 = 8.5, n9 = 9.5, n10 = 10.5, n11 = 11.5, n12 = 12.5,
+		j301 = 301.5, j302 = 302.5, j303 = 303.5, j304 = 304.5, j305 = 305.5,
+		j306 = 306.5, j307 = 307.5, j308 = 308.5, j309 = 309.5, a310 = 310.5,
+		n311 = 311.5, n312 = 312.5, n313 = 313.5, n314 = 314.5, n315 = 315.5,
+		n316 = 316.5, n317 = 317.5, n318 = 318.5, n319 = 319.5, n320 = 320.5,
+		n321 = 321.5, n322 = 322.5, n323 = 323.5, n324 = 324.5, n325 = 325.5,
+		n326 = 326.5, n327 = 327.5, n328 = 328.5, a329 = 329.5, n330 = 330.5,
+		n331 = 331.5, n332 = 332.5, n333 = 333.5, n334 = 334.5, n335 = 335.5,
+		n336 = 336.5, n337 = 337.5, n338 = 338.5, n339 = 339.5, n340 = 340.5,
+		n341 = 341.5, z342 = 342.5, n343 = 343.5, n344 = 344.5, n345 = 345.5,
+		n346 = 346.5, n347 = 347.5, n348 = 348.5, n349 = 349.5, n350 = 350.5,
+		n351 = 351.5, n352 = 352.5, r353 = 353.5, n354 = 354.5, n355 = 355.5,
+		n356 = 356.5, n357 = 357.5, n358 = 358.5, n359 = 359.5, n360 = 360.5,
+		n361 = 361.5, n362 = 362.5, n363 = 363.5, n364 = 364.5, n365 = 365.5,
+		n366 = 366.5, z367 = 367.5, n368 = 368.5, n369 = 369.5, n370 = 370.5,
+		n371 = 371.5, n372 = 372.5, n373 = 373.5, n374 = 374.5, n375 = 375.5,
+		a376 = 376.5, n377 = 377.5, n378 = 378.5, n379 = 379.5, n380 = 380.5,
+		n381 = 381.5, n382 = 382.5, n383 = 383.5, n384 = 384.5, n385 = 385.5,
+		n386 = 386.5, n387 = 387.5, n388 = 388.5, n389 = 389.5, n390 = 390.5,
+		n391 = 391.5, n392 = 392.5, n393 = 393.5, n394 = 394.5, n395 = 395.5,
+		n396 = 396.5, n397 = 397.5, n398 = 398.5, n399 = 399.5, n400 = 400.5,
+		n13 = 13.5, n14 = 14.5, n15 = 15.5, n16 = 16.5, n17 = 17.5,
+		n18 = 18.5, n19 = 19.5, n20 = 20.5, n21 = 21.5, n22 = 22.5,
+		n23 = 23.5, a24 = 24.5, n25 = 25.5, n26 = 26.5, n27 = 27.5,
+		n28 = 28.5, n29 = 29.5, j30 = 30.5, n31 = 31.5, n32 = 32.5,
+		n33 = 33.5, n34 = 34.5, n35 = 35.5, n36 = 36.5, n37 = 37.5,
+		n38 = 38.5, n39 = 39.5, n40 = 40.5, n41 = 41.5, n42 = 42.5,
+		n43 = 43.5, n44 = 44.5, n45 = 45.5, n46 = 46.5, n47 = 47.5,
+		n48 = 48.5, n49 = 49.5, n50 = 50.5, n51 = 51.5, n52 = 52.5,
+		n53 = 53.5, n54 = 54.5, n55 = 55.5, n56 = 56.5, n57 = 57.5,
+		n58 = 58.5, n59 = 59.5, n60 = 60.5, n61 = 61.5, n62 = 62.5,
+		n63 = 63.5, n64 = 64.5, n65 = 65.5, a66 = 66.5, z67 = 67.5,
+		n68 = 68.5, n69 = 69.5, n70 = 70.5, n71 = 71.5, n72 = 72.5,
+		n73 = 73.5, n74 = 74.5, n75 = 75.5, n76 = 76.5, n77 = 77.5,
+		n78 = 78.5, n79 = 79.5, n80 = 80.5, n81 = 81.5, n82 = 82.5,
+		n83 = 83.5, n84 = 84.5, n85 = 85.5, n86 = 86.5, n87 = 87.5,
+		n88 = 88.5, n89 = 89.5, n90 = 90.5, n91 = 91.5, n92 = 92.5,
+		n93 = 93.5, n94 = 94.5, n95 = 95.5, n96 = 96.5, n97 = 97.5,
+		n98 = 98.5, n99 = 99.5, n100 = 100.5, n201 = 201.5, n202 = 202.5,
+		n203 = 203.5, n204 = 204.5, n205 = 205.5, n206 = 206.5, n207 = 207.5,
+		n208 = 208.5, n209 = 209.5, n210 = 210.5, n211 = 211.5, n212 = 212.5,
+		n213 = 213.5, n214 = 214.5, n215 = 215.5, n216 = 216.5, n217 = 217.5,
+		n218 = 218.5, n219 = 219.5, n220 = 220.5, n221 = 221.5, n222 = 222.5,
+		n223 = 223.5, n224 = 224.5, n225 = 225.5, n226 = 226.5, n227 = 227.5,
+		n228 = 228.5, n229 = 229.5, n230 = 230.5, n231 = 231.5, n232 = 232.5,
+		n233 = 233.5, n234 = 234.5, n235 = 235.5, n236 = 236.5, n237 = 237.5,
+		n238 = 238.5, n239 = 239.5, a240 = 240.5, a241 = 241.5, a242 = 242.5,
+		a243 = 243.5, a244 = 244.5, a245 = 245.5, a246 = 246.5, a247 = 247.5,
+		a248 = 248.5, a249 = 249.5, n250 = 250.5, n251 = 251.5, n252 = 252.5,
+		n253 = 253.5, n254 = 254.5, n255 = 255.5, n256 = 256.5, n257 = 257.5,
+		n258 = 258.5, n259 = 259.5, n260 = 260.5, n261 = 261.5, n262 = 262.5,
+		n263 = 263.5, n264 = 264.5, n265 = 265.5, n266 = 266.5, n267 = 267.5,
+		n268 = 268.5, n269 = 269.5, n270 = 270.5, n271 = 271.5, n272 = 272.5,
+		n273 = 273.5, n274 = 274.5, n275 = 275.5, n276 = 276.5, n277 = 277.5,
+		n278 = 278.5, n279 = 279.5, n280 = 280.5, n281 = 281.5, n282 = 282.5,
+		n283 = 283.5, n284 = 284.5, n285 = 285.5, n286 = 286.5, n287 = 287.5,
+		n288 = 288.5, n289 = 289.5, n290 = 290.5, n291 = 291.5, n292 = 292.5,
+		n293 = 293.5, n294 = 294.5, n295 = 295.5, n296 = 296.5, n297 = 297.5,
+		n298 = 298.5, n299 = 299.5, j300 = 300} || 1;
+	} while(!( 1) );
+
+	lok(a.n299 == 299.5);
+	xxx = 1;
+	lok(xxx == 1);
+
+	//stat(a)
+
+	function a::findfield (f) {
+	  var i,v = next(this, null);
+	  while( i != f ) {
+	    if( ! i ) { return; }
+	    i,v = next(this, i);
+	  }
+	  return v;
+	}
+
+	var ii = 0;
+	i = 1;
+	while( b[i] ) {
+	  var r = a->findfield(b[i]);
+	  lok(a[b[i]] == r);
+	  ii = math.max(ii,i);
+	  i += 1;
+	}
+
+	lok(ii == 299);
+
+	//function xxxx (x) coroutine.yield('b'); return ii+x end
+
+	//lok(xxxx(10) == 309)
+
+	a = null;
+	b = null;
+	a1 = null;
+
+	//print("tables with table indices:")
+	i = 1; a={};
+	while( i <= 1023 ) { a[{}] = i; i+=1; }
+	//stat(a)
+	a = null;
+
+	//print("tables with function indices:")
+	a={};
+	for( i=1,511 ) { var x; a[function () { return x; }] = i; }
+	//stat(a)
+	a = null;
+
+});
+
+lrun("very big", function() {
+	if( rawget(_G, "_soft") ) { return 10; }
+
+	//print "testing large programs (>64k)"
+
+	// template to create a very big test file
+	prog = [=[$
+require("minctest")
+
+var a,b
+
+b = {$1$
+  b30009 = 65534,
+  b30010 = 65535,
+  b30011 = 65536,
+  b30012 = 65537,
+  b30013 = 16777214,
+  b30014 = 16777215,
+  b30015 = 16777216,
+  b30016 = 16777217,
+  b30017 = 4294967294,
+  b30018 = 4294967295,
+  b30019 = 4294967296,
+  b30020 = 4294967297,
+  b30021 = -65534,
+  b30022 = -65535,
+  b30023 = -65536,
+  b30024 = -4294967297,
+  b30025 = 15012.5,
+  $2$
+};
+
+lok(b.a50008 == 25004 && b["a11"] == 5.5)
+lok(b.a33007 == 16503.5 && b.a50009 == 25004.5)
+lok(b["b"..30024] == -4294967297)
+
+function b::xxx (a,b) {return a+b }
+lok(b->xxx(10, 12) == 22)   // pushself with non-constant index
+b.xxx = null
+
+s = 0; n=0
+for( a,b in pairs(b) ) { s=s+b; n=n+1 }
+lok(s==13977183656.5  && n==70001)
+
+//require "checktable"
+//stat(b)
+
+a = null; b = null
+//print'+'
+
+function f(x) {b=x }
+
+a = f({$3$}) || 10
+
+lok(a==10)
+lok(b[1] == "a10" && b[2] == 5 && b[table.getn(b)-1] == "a50009")
+
+
+function xxxx (x) {return b[x] }
+
+lok(xxxx(3) == "a11")
+
+a = null; b=null
+xxxx = null
+
+return 10
+
+]=];
+
+	file = os.tmpname();
+	var io_fd = io.open(file, "w");
+
+	// functions to fill in the $n$
+	F = {
+	function () {   // $1$
+	  for( i=10,50009 ) {
+	    io_fd->write('a', i, ' = ', 5+((i-10)/2), ',\n');
+	  }
+	},
+
+	function () {   // $2$
+	  for( i=30026,50009 ) {
+	    io_fd->write('b', i, ' = ', 15013+((i-30026)/2), ',\n');
+	  }
+	},
+
+	function () {   // $3$
+	  for( i=10,50009 ) {
+	    io_fd->write('"a', i, '", ', 5+((i-10)/2), ',\n');
+	  }
+	},
+	};
+
+	for( s in string.gmatch(prog, "$([^$]+)") ) {
+	  var n = tonumber(s);
+	  if( ! n ) { io_fd->write(s); } else { F[n](); }
+	}
+	io_fd->close();
+	result = dofile(file);
+	lok(os.remove(file));
+
+});
+
+lrun("syntax", function() {
+
+	// testing priorities
+
+	lok(2**3**2 == 2**(3**2));
+	lok(2**3*4 == (2**3)*4);
+	lok(2**-2 == 1/4 && -2**- -2 == - - -4);
+	lok(! null && 2 && !(2>3 || 3<2));
+	lok(-3-1-5 == 0+0-9);
+	lok(-2**2 == -4 && (-2)**2 == 4 && 2*2-3-1 == 0);
+	lok(2*1+3/3 == 3 && 1+2 .. 3*1 == "33");
+	lok(!(2+1 > 3*1) && "a".."b" > "a");
+
+	lok(! ((true || false) && null));
+	lok(      true || false  && null);
+
+	var a,b = 1,null;
+	lok(-(1 || 2) == -1 && (1 && 2)+(-1.25 || -4) == 0.75);
+	x = ((b || a)+1 == 2 && (10 || a)+1 == 11); lok(x);
+	x = (((2<3) || 1) == true && (2<3 && 4) == 4); lok(x);
+
+	x,y=1,2;
+	lok((x>y) && x || y == 2);
+	x,y=2,1;
+	lok((x>y) && x || y == 2);
+
+	lok(1234567890 == tonumber('1234567890') && 1234567890+1 == 1234567891);
+
+
+	// silly loops
+	do { } while(!( 1) ); do { } while(!( true) );
+	while( false ) { }; while( null ) { };
+
+	{  // test old bug (first name could not be an `upvalue')
+	 var a; function f(x) { x={a=1}; x={x=1}; x={G=1}; }
+	}
+
+	function f (i) {
+	  if( type(i) != 'number' ) { return i,'jojo'; };
+	  if( i > 0 ) { return i, f(i-1); };
+	}
+
+	x = {f(3), f(5), f(10);};
+	lok(x[1] == 3 && x[2] == 5 && x[3] == 10 && x[4] == 9 && x[12] == 1);
+	lok(x[null] == null);
+	x = {f('alo'), f('xixi'), null};
+	lok(x[1] == 'alo' && x[2] == 'xixi' && x[3] == null);
+	x = {f('alo')..'xixi'};
+	lok(x[1] == 'aloxixi');
+	x = {f({})};
+	lok(x[2] == 'jojo' && type(x[1]) == 'table');
+
+
+	var f = function (i) {
+	  if( i < 10 ) { return 'a';
+	  } else if( i < 20 ) { return 'b';
+	  } else if( i < 30 ) { return 'c';
+	  };
+	};
+
+	lok(f(3) == 'a' && f(12) == 'b' && f(26) == 'c' && f(100) == null);
+
+	for( i=1,1000 ) { break; };
+	n=100;
+	i=3;
+	t = {};
+	a=null;
+	while( ! a ) {
+	  a=0; for( i=1,n ) { for( i=i,1,-1 ) { a+=1; t[i]=1; }; };
+	}
+	lok(a == n*(n+1)/2 && i==3);
+	lok(t[1] && t[n] && ! t[0] && ! t[n+1]);
+
+	function f(b) {
+	  var x = 1;
+	  do {
+	    var a;
+	    if( b==1 ) { var b=1; x=10; break;
+	    } else if( b==2 ) { x=20; break;
+	    } else if( b==3 ) { x=30;
+	    } else { var a,b,c,d=math.sin(1); x+=1;
+	    }
+	  } while(!( x>=12) );
+	  return x;
+	};
+
+	lok(f(1) == 10 && f(2) == 20 && f(3) == 30 && f(4)==12);
+
+
+	f = function (i) {
+	  if( i < 10 ) { return 'a';
+	  } else if( i < 20 ) { return 'b';
+	  } else if( i < 30 ) { return 'c';
+	  } else { return 8;
+	  }
+	};
+
+	lok(f(3) == 'a' && f(12) == 'b' && f(26) == 'c' && f(100) == 8);
+
+	a, b = null, 23;
+	x = {f(100)*2+3 || a, a || b+2};
+	lok(x[1] == 19 && x[2] == 25);
+	x = {f=2+3 || a, a = b+2};
+	lok(x.f == 5 && x.a == 25);
+
+	a={y=1};
+	x = {a.y};
+	lok(x[1] == 1);
+
+	function f(i) {
+	  while( 1 ) {
+	    if( i>0 ) { i-=1;
+	    } else { return; };
+	  };
+	};
+
+	function g(i) {
+	  while( 1 ) {
+	    if( i>0 ) { i-=1;
+	    } else { return; }
+	  }
+	}
+
+	f(10); g(10);
+
+	{
+	  function f () { return 1,2,3; }
+	  var a, b, c = f();
+	  lok(a==1 && b==2 && c==3);
+	  a, b, c = (f());
+	  lok(a==1 && b==null && c==null);
+	}
+
+	a,b = 3 && f();
+	lok(a==1 && b==null);
+
+	function g() { f(); return; };
+	lok(g() == null);
+	function g() { return null || f(); }
+	a,b = g();
+	lok(a==1 && b==null);
+
+
+	f = [=[
+	return function ( a , b , c , d , e ) {
+	  var x = a >= b || c || ( d && e ) || null
+	  return x
+	} , { a = 1 , b = 2 >= 1 , } || { 1 };
+	]=];
+	f = string.gsub(f, "%s+", "\n");   // force a SETLINE between opcodes
+	f,a = loadstring(f)();
+	lok(a.a == 1 && a.b);
+
+	function g (a,b,c,d,e) {
+	  if( ! (a>=b || c || d && e || null) ) { return 0; } else { return 1; };
+	}
+
+	function h (a,b,c,d,e) {
+	  while( (a>=b || c || (d && e) || null) ) { return 1; };
+	  return 0;
+	};
+
+	lok(f(2,1) == true && g(2,1) == 1 && h(2,1) == 1);
+	lok(f(1,2,'a') == 'a' && g(1,2,'a') == 1 && h(1,2,'a') == 1);
+	lok(f(1,2,'a')
+	!=          // force SETLINE before null
+	null, "");
+	lok(f(1,2,'a') == 'a' && g(1,2,'a') == 1 && h(1,2,'a') == 1);
+	lok(f(1,2,null,1,'x') == 'x' && g(1,2,null,1,'x') == 1 &&
+					   h(1,2,null,1,'x') == 1);
+	lok(f(1,2,null,null,'x') == null && g(1,2,null,null,'x') == 0 &&
+					     h(1,2,null,null,'x') == 0);
+	lok(f(1,2,null,1,null) == null && g(1,2,null,1,null) == 0 &&
+					   h(1,2,null,1,null) == 0);
+
+	lok(1 && 2<3 == true && 2<3 && 'a'<'b' == true);
+	x = 2<3 && ! 3; lok(x==false);
+	x = 2<1 || (2>1 && 'a'); lok(x=='a');
+
+
+	{
+	  var a; if( null ) { a=1; } else { a=2; };    // this null comes as PUSHNIL 2
+	  lok(a==2);
+	}
+
+	function F(a) {
+	  lok(debug.getinfo(1, "n").name == 'F');
+	  return a,2,3;
+	}
+
+	a,b = F(1)!=null; lok(a == true && b == null);
+	a,b = F(null)==null; lok(a == true && b == null);
+
+	//--------------------------------------------------------------
+	// creates all combinations of 
+	// [not] ([not] arg op [not] (arg op [not] arg ))
+	// and tests each one
+
+	function ID(x) { return x; }
+
+	function f(t, i) {
+	  var b = t.n;
+	  var res = math.mod(math.floor(i/c), b)+1;
+	  c *= b;
+	  return t[res];
+	}
+
+	var arg = {" ( 1 < 2 ) ", " ( 1 >= 2 ) ", " F ( ) ", "  null "; n=4};
+
+	var op = {" && ", " || ", " == ", " != "; n=4};
+
+	var neg = {" ", " ! "; n=2};
+
+	var i = 0;
+	do {
+	  c = 1;
+	  var s = f(neg, i)..'ID('..f(neg, i)..f(arg, i)..f(op, i)..
+		    f(neg, i)..'ID('..f(arg, i)..f(op, i)..f(neg, i)..f(arg, i)..'))';
+	  var s1 = string.gsub(s, 'ID', '');
+	  K,X,NX,WX1,WX2 = null;
+	  s = string.format([=[
+	      var a = %s;
+	      var b = ! %s;
+	      K = b;
+	      var xxx; 
+	      if( %s ) { X = a;  } else { X = b; }
+	      if( %s ) { NX = b;  } else { NX = a; }
+	      while( %s ) { WX1 = a; break; }
+	      while( %s ) { WX2 = a; break; }
+	      do { if( (%s) ) { break; }; lok(b);  } while(!( !(%s)) );
+	  ]=], s1, s, s1, s, s1, s, s1, s, s);
+	  var res = loadstring(s)();
+	  lok(X && ! NX && ! WX1 == K && ! WX2 == K);
+	  //lok(math.mod(i,4000) == 0)
+	  i += 1;
+	} while(!( i==c) );
+
+});
+
+lrun("attrib", function() {
+
+	//print("testing assignments, logical operators, and constructors")
+
+	var res, res2 = 27;
+
+	a, b = 1, 2+3;
+	lok(a==1 && b==5);
+	a={};
+	function f() { return 10, 11, 12; }
+	a.x, b, a[1] = 1, 2, f();
+	lok(a.x==1 && b==2 && a[1]==10);
+	a[f()], b, a[f()+3] = f(), a, 'x';
+	lok(a[10] == 10 && b == a && a[13] == 'x');
+
+	{
+	  var f = function (n) { var x = {}; for( i=1,n ) { x[i]=i; };
+				 return unpack(x); };
+	  var a,b,c;
+	  a,b = 0, f(1);
+	  lok(a == 0 && b == 1);
+	  A,b = 0, f(1);
+	  lok(A == 0 && b == 1);
+	  a,b,c = 0,5,f(4);
+	  lok(a==0 && b==5 && c==1);
+	  a,b,c = 0,5,f(0);
+	  lok(a==0 && b==5 && c==null);
+	}
+
+
+	a, b, c, d = 1 && null, 1 || null, (1 && (null || 1)), 6;
+	lok(! a && b && c && d==6);
+
+	d = 20;
+	a, b, c, d = f();
+	lok(a==10 && b==11 && c==12 && d==null);
+	a,b = f(), 1, 2, 3, f();
+	lok(a==10 && b==1);
+
+	lok(a<b == false && a>b == true);
+	lok((10 && 2) == 2);
+	lok((10 || 2) == 10);
+	lok((10 || lok(null)) == 10);
+	lok(! (null && lok(null)));
+	lok((null || "alo") == "alo");
+	lok((null && 10) == null);
+	lok((false && 10) == false);
+	lok((true || 10) == true);
+	lok((false || 10) == 10);
+	lok(false != null);
+	lok(null != false);
+	lok(! null == true);
+	lok(! ! null == false);
+	lok(! ! 1 == true);
+	lok(! ! a == true);
+	lok(! ! (6 || null) == true);
+	lok(! ! (null && 56) == false);
+	lok(! ! (null && true) == false);
+
+	a = {};
+	a[true] = 20;
+	a[false] = 10;
+	lok(a[1<2] == 20 && a[1>2] == 10);
+
+	function f(a) { return a; }
+
+	var a = {};
+	for( i=3000,-3000,-1 ) { a[i] = i; }
+	a[10e30] = "alo"; a[true] = 10; a[false] = 20;
+	lok(a[10e30] == 'alo' && a[! 1] == 20 && a[10<20] == 10);
+	for( i=3000,-3000,-1 ) { lok(a[i] == i); }
+	a[print] = assert;
+	a[f] = print;
+	a[a] = a;
+	lok(a[a][a][a][a][print] == assert);
+	a[print](a[a[f]] == a[print]);
+	a = null;
+
+	a = {10,9,8,7,6,5,4,3,2; [-3]='a', [f]=print, a='a', b='ab'};
+	a, a.x, a.y = a, a[-3];
+	lok(a[1]==10 && a[-3]==a.a && a[f]==print && a.x=='a' && ! a.y);
+	a[1], f(a)[2], b, c = {['alo']=assert}, 10, a[1], a[f], 6, 10, 23, f(a), 2;
+	a[1].alo(a[2]==10 && b==10 && c==print);
+
+	a[2**31] = 10; a[2**31+1] = 11; a[-2**31] = 12;
+	a[2**32] = 13; a[-2**32] = 14; a[2**32+1] = 15; a[10**33] = 16;
+
+	lok(a[2**31] == 10 && a[2**31+1] == 11 && a[-2**31] == 12 &&
+	       a[2**32] == 13 && a[-2**32] == 14 && a[2**32+1] == 15 &&
+	       a[10**33] == 16);
+
+	a = null;
+
+
+	{
+	  var a,i,j,b;
+	  a = {'a', 'b'}; i=1; j=2; b=a;
+	  i, a[i], a, j, a[j], a[i+j] = j, i, i, b, j, i;
+	  lok(i == 2 && b[1] == 1 && a == 1 && j == b && b[2] == 2 &&
+		 b[3] == 1);
+	}
+
+});
+
+lrun("locals", function() {
+
+	{
+	  var i = 10;
+	  { var i = 100; lok(i==100); }
+	  { var i = 1000; lok(i==1000); }
+	  lok(i == 10);
+	  if( i != 10 ) {
+	    var i = 20;
+	  } else {
+	    var i = 30;
+	    lok(i == 30);
+	  }
+	}
+
+
+
+	f = null;
+
+	var f;
+	x = 1;
+
+	a = null;
+	loadstring('var a = {}')();
+	lok(type(a) != 'table');
+
+	function f (a) {
+	  var _1, _2, _3, _4, _5;
+	  var _6, _7, _8, _9, _10;
+	  var x = 3;
+	  var b = a;
+	  var c,d = a,b;
+	  if( (d == b) ) {
+	    var x = 'q';
+	    x = b;
+	    lok(x == 2);
+	  } else {
+	    lok(null);
+	  }
+	  lok(x == 3);
+	  var f = 10;
+	}
+
+	var b=10;
+	var a; do { var b; a,b=1,2; lok(a+1==b); } while(!( a+b==3) );
+
+
+	lok(x == 1);
+
+	f(2);
+	lok(type(f) == 'function');
+
+
+	// testing globals ;-)
+	{
+	  var f = {};
+	  var _G = _G;
+	  for( i=1,10 ) { f[i] = function (x) { A+=1; return A, _G.getfenv(x); }; }
+	  A=10; lok(f[1]() == 11);
+	  for( i=1,10 ) { lok(setfenv(f[i], {A=i}) == f[i]); }
+	  lok(f[3]() == 4 && A == 11);
+	  var a,b = f[8](1);
+	  lok(b.A == 9);
+	  a,b = f[8](0);
+	  lok(b.A == 11);   // `real' global
+	  var g;
+	  f = function () { lok(setfenv(2, {a='10'}) == g); }
+	  g = function () { f(); _G.lok(_G.getfenv(1).a == '10'); };
+	  g(); lok(getfenv(g).a == '10');
+	}
+
+	// test for global table of loaded chunks
+	var function foo (s) {
+	  return loadstring(s);
+	}
+
+	lok(getfenv(foo("")) == _G);
+	a = {loadstring = loadstring}; 
+	setfenv(foo, a);
+	lok(getfenv(foo("")) == _G);
+	setfenv(0, a);  // change global environment
+	lok(getfenv(foo("")) == a);
+	setfenv(0, _G);
+
+
+	// testing limits for special instructions
+
+	var p = 4;
+	for( i=2,31 ) {
+	  for( j=-3,3 ) {
+	    loadstring(string.format([=[var a=%s;a=a+
+						    %s;
+					      lok(a
+					      ==2**%s)]=], j, p-j, i)) ();
+	    loadstring(string.format([=[var a=%s;
+					      a=a-%s;
+					      lok(a==-2**%s)]=], -j, p-j, i)) ();
+	    loadstring(string.format([=[var a,b=0,%s;
+					      a=b-%s;
+					      lok(a==-2**%s)]=], -j, p-j, i)) ();
+	  }
+	  p =2*p;
+	}
+
+	if( rawget(_G, "querytab") ) {
+	  // testing clearing of dead elements from tables
+	  collectgarbage("stop");   // stop GC
+	  var a = {[{}] = 4, [3] = 0, alo = 1, 
+		     a1234567890123456789012345678901234567890 = 10};
+
+	  var t = querytab(a);
+
+	  for( k,_ in pairs(a) ) { a[k] = null; }
+	  collectgarbage();   // restore GC and collect dead fiels in `a'
+	  for( i=0,t-1 ) {
+	    var k = querytab(a, i);
+	    lok(k == null || type(k) == 'number' || k == 'alo');
+	  }
+	}
+
+});
+
+lrun("errors", function() {
+
+	function doit (s) {
+	  var f, msg = loadstring(s);
+	  if( f == null ) { return msg; }
+	  var cond;
+	  cond, msg = pcall(f);
+	  return (! cond) && msg;
+	}
+
+
+	function checkmessage (prog, msg) {
+	  //if(!string.find(doit(prog), msg, 1, true)) print(doit(prog), msg);
+	  lok(string.find(doit(prog), msg, 1, true));
+	}
+
+	function checksyntax (prog, extra, token, line) {
+	  var msg = doit(prog);
+	  token = string.gsub(token, "(%p)", "%%%1");
+	  var pt = string.format([=[^%%[string ".*"%%]:%d: .- near '%s'$]=],
+				   line, token);
+      if( !onLuajit ) {
+	  	lok(string.find(msg, pt));
+	  	lok(string.find(msg, msg, 1, true));
+      }
+	}
+
+
+	// test error message with no extra info
+	lok(doit("error('hi', 0)") == 'hi');
+
+	// test error message with no info
+	lok(doit("error()") == null);
+
+
+	// test common errors/errors that crashed in the past
+	lok(doit("unpack({}, 1, n=2**30)"));
+	lok(doit("a=math.sin()"));
+	lok(! doit("tostring(1)") && doit("tostring()"));
+	lok(doit("tonumber()"));
+	lok(doit("do {} while(! 1 ); a"));
+	checksyntax("break label", "", "label", 1);
+	if( !onLuajit ) lok(doit(";"));
+	if( !onLuajit ) lok(doit("a=1;;"));
+	lok(doit("return;;"));
+	lok(doit("assert(false)"));
+	lok(doit("assert(null)"));
+	if( !onLuajit ) lok(doit("a=math.sin\n(3)"));
+	lok(doit("function a (... , ...) {}"));
+	lok(doit("function a (, ...) {}"));
+
+	checksyntax([=[
+	  var a = {4
+
+	]=], "'}' expected (to close '{' at line 1)", "<eof>", 3);
+
+
+	// tests for better error messages
+
+	checkmessage("a=1; bbbb=2; a=math.sin(3)+bbbb(3)", "global 'bbbb'");
+	checkmessage("a=1; var a,bbbb=2,3; a = math.sin(1) && bbbb(3)",
+	       "local 'bbbb'");
+	checkmessage("a={}; { var a=1 } a->bbbb(3)", "method 'bbbb'");
+	checkmessage("var a={}; a.bbbb(3)", "field 'bbbb'");
+	lok(! string.find(doit("a={13}; var bbbb=1; a[bbbb](3)"), "'bbbb'"));
+	checkmessage("a={13}; var bbbb=1; a[bbbb](3)", "number");
+
+	aaa = null;
+	checkmessage("aaa.bbb->ddd(9)", "global 'aaa'");
+	checkmessage("var aaa={bbb=1}; aaa.bbb->ddd(9)", "field 'bbb'");
+	checkmessage("var aaa={bbb={}}; aaa.bbb->ddd(9)", "method 'ddd'");
+	checkmessage("var a,b,c; (function () {a = b+1 })()", "upvalue 'b'");
+	lok(! doit("var aaa={bbb={ddd=next}}; aaa.bbb->ddd(null)"));
+
+	checkmessage("b=1; var aaa='a'; x=aaa+b", "local 'aaa'");
+	checkmessage("aaa={}; x=3/aaa", "global 'aaa'");
+	checkmessage("aaa='2'; b=null;x=aaa*b", "global 'b'");
+	checkmessage("aaa={}; x=-aaa", "global 'aaa'");
+	if( !onLuajit ) lok(! string.find(doit("aaa={}; x=(aaa || aaa)+(aaa && aaa)"), "'aaa'"));
+	if( !onLuajit ) lok(! string.find(doit("aaa={}; (aaa || aaa)()"), "'aaa'"));
+
+	checkmessage([=[aaa=9
+	do {} while(! 3==3 );
+	var x=math.sin(math.cos(3))
+	if( math.sin(1) == x ) return math.sin(1);  // tail call
+	var a,b = 1, {
+	  {x='a'..'b'..'c', y='b', z=x},
+	  {1,2,3,4,5} || 3+3<=3+3,
+	  3+1>3+1,
+	  {d = x && aaa[x || y]}}
+	]=], "global 'aaa'");
+
+	checkmessage([=[
+	var x,y = {},1
+	if( math.sin(1) == 0 ) return 3;   // return
+	x.a()]=], "field 'a'");
+
+	checkmessage([=[
+	prefix = null
+	insert = null
+	while( 1 ) {  
+	  var a
+	  if( null ) break;
+	  insert(prefix, a)
+	}]=], "global 'insert'");
+
+	if( !onLuajit ) {
+		checkmessage([=[  // tail call
+		  return math.sin("a")
+		]=], "'sin'");
+	}
+
+	checkmessage([=[collectgarbage("nooption")]=], "invalid option");
+
+	checkmessage([=[x = print .. "a"]=], "concatenate");
+
+	checkmessage("getmetatable(io.stdin).__gc()", "no value");
+
+
+	// testing line error
+
+	function lineerror (s) {
+	  var err,msg = pcall(loadstring(s));
+	  var line = string.match(msg, ":(%d+):");
+	  return line && line+0;
+	}
+
+	lok(lineerror("var a\n for( i=1,'a' ) \n print(i) \n ;") == 2);
+	lok(lineerror("\n var a \n for( k,v in 3 \n ) \n print(k) \n ;") == 3);
+	lok(lineerror("\n\n for( k,v in \n 3 \n ) \n print(k) \n ;") == 4);
+	lok(lineerror("function a.x.y ()\n{a=a+1\n}") == 1);
+
+	var p = [=[
+	function g() {f() }
+	function f(x) {error('a', X) }
+	g()
+	]=];
+	X=3;lok(lineerror(p) == 3);
+	X=0;lok(lineerror(p) == null);
+	X=1;lok(lineerror(p) == 2);
+	X=2;lok(lineerror(p) == 1);
+
+	lineerror = null;
+
+	C = 0;
+	var l = debug.getinfo(1, "l").currentline; function y () { C+=1; y(); }
+
+	var function checkstackmessage (m) {
+	  return (string.find(m, "^.-:%d+: stack overflow"));
+	}
+	lok(checkstackmessage(doit('y()')));
+	lok(checkstackmessage(doit('y()')));
+	lok(checkstackmessage(doit('y()')));
+	// teste de linhas em erro
+	C = 0;
+	var l1;
+	var function g() {
+	  l1 = debug.getinfo(1, "l").currentline; y();
+	}
+	var _, stackmsg = xpcall(g, debug.traceback);
+	var stack = {};
+	for( line in string.gmatch(stackmsg, "[^\n]*") ) {
+	  var curr = string.match(line, ":(%d+):");
+	  if( curr ) { table.insert(stack, tonumber(curr)); }
+	}
+	var i=1;
+	while( stack[i] != l1 ) {
+	  lok(stack[i] == l);
+	  i += 1;
+	}
+	lok(i > 15);
+
+
+	// error in error handling
+	var res, msg = xpcall(error, error);
+	lok(! res && type(msg) == 'string');
+
+	var function f (x) {
+	  if( x==0 ) { error('a\n');
+	  } else {
+	    var aux = function () { return f(x-1); };
+	    var a,b = xpcall(aux, aux);
+	    return a,b;
+	  }
+	}
+	f(3);
+
+	// non string messages
+	function f() { error({msg='x'}); }
+	res, msg = xpcall(f, function (r) { return {msg=r.msg..'y'}; });
+	lok(msg.msg == 'xy');
+
+	checksyntax("syntax error", "", "error", 1);
+	checksyntax("1.000", "", "1.000", 1);
+	checksyntax("[=[a]=]", "", "[=[a]=]", 1);
+	checksyntax("'aa'", "", "'aa'", 1);
+
+	// test 255 as first char in a chunk
+	checksyntax("\255a = 1", "", "\255", 1);
+
+	doit('I = loadstring("a=9+"); a=3');
+	lok(a==3 && I == null);
+
+	lim = 1000;
+	if( rawget(_G, "_soft") ) { lim = 100; }
+	for( i=1,lim ) {
+	  doit('a = ');
+	  doit('a = 4+null');
+	}
+
+
+	// testing syntax limits
+	var function testrep (init, rep) {
+	  var s = "var a; "..init .. string.rep(rep, 400);
+	  var a,b = loadstring(s);
+	  //if(!(! a && string.find(b, "syntax levels"))) print(b);
+	  lok(! a && string.find(b, "syntax levels"));
+	}
+	testrep("a=", "{");
+	testrep("a=", "(");
+	testrep("", "a(");
+	testrep("", "{ ");
+	testrep("", "while( a ) { ");
+	//testrep("", "if( a ) else ");
+	testrep("", "function foo () {");
+	testrep("a=", "a..");
+	testrep("a=", "a**");
+
+
+	// testing other limits
+	// upvalues
+	var  s = "function foo ()\n { var ";
+	for( j = 1,70 ) {
+	  s = s.."a"..j..", ";
+	}
+	s = s.."b\n";
+	for( j = 1,70 ) {
+	  s = s.."function foo"..j.." ()\n {a"..j.."=3\n";
+	}
+	var a,b = loadstring(s);
+	lok(string.find(b, "line 3"));
+
+	// local variables
+	s = "\nfunction foo ()\n  {var ";
+	for( j = 1,300 ) {
+	  s = s.."a"..j..", "; 
+	}
+	s = s.."b\n";
+	a,b = loadstring(s);
+	lok(string.find(b, "line 2"));
+
+});
+
+lrun("files", function() {
+
+	lok(io.input(io.stdin) == io.stdin);
+	lok(io.output(io.stdout) == io.stdout);
+
+/*
+	lok(type(io.input()) == "userdata" and io.type(io.output()) == "file")
+	lok(io.type(8) == null)
+	local a = {}; setmetatable(a, {})
+	lok(io.type(a) == null)
+
+	local a,b,c = io.open('xuxu_nao_existe')
+	lok(not a and type(b) == "string" and type(c) == "number")
+
+	a,b,c = io.open('/a/b/c/d', 'w')
+	lok(not a and type(b) == "string" and type(c) == "number")
+
+	local file = os.tmpname()
+	local otherfile = os.tmpname()
+
+	lok(os.setlocale('C', 'all'))
+
+	io.input(io.stdin); io.output(io.stdout);
+
+	os.remove(file)
+	lok(loadfile(file) == null)
+	lok(io.open(file) == null)
+	io.output(file)
+	lok(io.output() ~= io.stdout)
+
+	lok(io.output():seek() == 0)
+	lok(io.write("alo alo"))
+	lok(io.output():seek() == string.len("alo alo"))
+	lok(io.output():seek("cur", -3) == string.len("alo alo")-3)
+	lok(io.write("joao"))
+	lok(io.output():seek("end") == string.len("alo joao"))
+
+	lok(io.output():seek("set") == 0)
+
+	lok(io.write('"álo"', "{a}\n", "second line\n", "third line \n"))
+	lok(io.write('çfourth_line'))
+	io.output(io.stdout)
+	collectgarbage()  -- file should be closed by GC
+	lok(io.input() == io.stdin and rawequal(io.output(), io.stdout))
+
+	-- test GC for files
+	collectgarbage()
+	for i=1,120 do
+	  for i=1,5 do
+	    io.input(file)
+	    lok(io.open(file, 'r'))
+	    io.lines(file)
+	  end
+	  collectgarbage()
+	end
+
+	lok(os.rename(file, otherfile))
+	lok(os.rename(file, otherfile) == null)
+
+	io.output(io.open(otherfile, "a"))
+	lok(io.write("\n\n\t\t  3450\n"));
+	io.close()
+
+	-- test line generators
+	lok(os.rename(otherfile, file))
+	io.output(otherfile)
+	local f = io.lines(file)
+	while f() do end;
+	lok(not pcall(f))  -- read lines after EOF
+	lok(not pcall(f))  -- read lines after EOF
+	-- copy from file to otherfile
+	for l in io.lines(file) do io.write(l, "\n") end
+	io.close()
+	-- copy from otherfile back to file
+	local f = lok(io.open(otherfile))
+	lok(io.type(f) == "file")
+	io.output(file)
+	lok(io.output():read() == null)
+	for l in f:lines() do io.write(l, "\n") end
+	lok(f:close()); io.close()
+	lok(not pcall(io.close, f))   -- error trying to close again
+	lok(tostring(f) == "file (closed)")
+	lok(io.type(f) == "closed file")
+	io.input(file)
+	f = io.open(otherfile):lines()
+	for l in io.lines() do lok(l == f()) end
+	lok(os.remove(otherfile))
+
+	io.input(file)
+	do  -- test error returns
+	  local a,b,c = io.input():write("xuxu")
+	  lok(not a and type(b) == "string" and type(c) == "number")
+	end
+	lok(io.read(0) == "")   -- not eof
+	lok(io.read(5, '*l') == '"álo"')
+	lok(io.read(0) == "")
+	lok(io.read() == "second line")
+	local x = io.input():seek()
+	lok(io.read() == "third line ")
+	lok(io.input():seek("set", x))
+	lok(io.read('*l') == "third line ")
+	lok(io.read(1) == "ç")
+	lok(io.read(string.len"fourth_line") == "fourth_line")
+	lok(io.input():seek("cur", -string.len"fourth_line"))
+	lok(io.read() == "fourth_line")
+	lok(io.read() == "")  -- empty line
+	lok(io.read('*n') == 3450)
+	lok(io.read(1) == '\n')
+	lok(io.read(0) == null)  -- end of file
+	lok(io.read(1) == null)  -- end of file
+	lok(({io.read(1)})[2] == null)
+	lok(io.read() == null)  -- end of file
+	lok(({io.read()})[2] == null)
+	lok(io.read('*n') == null)  -- end of file
+	lok(({io.read('*n')})[2] == null)
+	lok(io.read('*a') == '')  -- end of file (OK for `*a')
+	lok(io.read('*a') == '')  -- end of file (OK for `*a')
+	collectgarbage()
+
+	io.close(io.input())
+	lok(not pcall(io.read))
+
+	lok(os.remove(file))
+
+	local t = '0123456789'
+	for i=1,12 do t = t..t; end
+	lok(string.len(t) == 10*2^12)
+
+	io.output(file)
+	io.write("alo\n")
+	io.close()
+	lok(not pcall(io.write))
+	local f = io.open(file, "a")
+	io.output(f)
+	collectgarbage()
+
+	lok(io.write(' ' .. t .. ' '))
+	lok(io.write(';', 'end of file\n'))
+	f:flush(); io.flush()
+	f:close()
+
+	io.input(file)
+	lok(io.read() == "alo")
+	lok(io.read(1) == ' ')
+	lok(io.read(string.len(t)) == t)
+	lok(io.read(1) == ' ')
+	lok(io.read(0))
+	lok(io.read('*a') == ';end of file\n')
+	lok(io.read(0) == null)
+	lok(io.close(io.input()))
+
+	lok(os.remove(file))
+
+	local x1 = "string\n\n\\com \"\"''coisas [[estranhas]] ]]'"
+	io.output(file)
+	lok(io.write(string.format("x2 = %q\n-- comment without ending EOS", x1)))
+	io.close()
+	lok(loadfile(file))()
+	lok(x1 == x2)
+	print('+')
+	lok(os.remove(file))
+	lok(os.remove(file) == null)
+	lok(os.remove(otherfile) == null)
+
+	io.output(file)
+	lok(io.write("qualquer coisa\n"))
+	lok(io.write("mais qualquer coisa"))
+	io.close()
+	io.output(lok(io.open(otherfile, 'wb')))
+	lok(io.write("outra coisa\0\1\3\0\0\0\0\255\0"))
+	io.close()
+
+	local filehandle = lok(io.open(file, 'r'))
+	local otherfilehandle = lok(io.open(otherfile, 'rb'))
+	lok(filehandle ~= otherfilehandle)
+	lok(type(filehandle) == "userdata")
+	lok(filehandle:read('*l') == "qualquer coisa")
+	io.input(otherfilehandle)
+	lok(io.read(string.len"outra coisa") == "outra coisa")
+	lok(filehandle:read('*l') == "mais qualquer coisa")
+	filehandle:close();
+	lok(type(filehandle) == "userdata")
+	io.input(otherfilehandle)
+	lok(io.read(4) == "\0\1\3\0")
+	lok(io.read(3) == "\0\0\0")
+	lok(io.read(0) == "")        -- 255 is not eof
+	lok(io.read(1) == "\255")
+	lok(io.read('*a') == "\0")
+	lok(not io.read(0))
+	lok(otherfilehandle == io.input())
+	otherfilehandle:close()
+	lok(os.remove(file))
+	lok(os.remove(otherfile))
+	collectgarbage()
+
+	io.output(file)
+	io.write[[
+	 123.4	-56e-2  not a number
+	second line
+	third line
+
+	and the rest of the file
+	]]
+	io.close()
+	io.input(file)
+	local _,a,b,c,d,e,h,__ = io.read(1, '*n', '*n', '*l', '*l', '*l', '*a', 10)
+	lok(io.close(io.input()))
+	lok(_ == ' ' and __ == null)
+	lok(type(a) == 'number' and a==123.4 and b==-56e-2)
+	lok(d=='second line' and e=='third line')
+	lok(h==[[
+
+	and the rest of the file
+	]])
+	lok(os.remove(file))
+	collectgarbage()
+*/
+
+	// testing buffers
+	{
+	  var f = io.open(file, "w");
+	  lok(f);
+	  var fr = io.open(file, "r");
+	  lok(fr);
+	  lok(f->setvbuf("full", 2000));
+	  f->write("x");
+	  lok(fr->read("*all") == "");  // full buffer; output not written yet
+	  f->close();
+	  fr->seek("set");
+	  lok(fr->read("*all") == "x");   // `close' flushes it
+	  f = io.open(file, "w");
+	  lok(f);
+	  lok(f->setvbuf("no"));
+	  f->write("x");
+	  fr->seek("set");
+	  lok(fr->read("*all") == "x");  // no buffer; output is ready
+	  f->close();
+	  f = io.open(file, "a");
+	  lok(f);
+	  lok(f->setvbuf("line"));
+	  f->write("x");
+	  fr->seek("set", 1);
+	  lok(fr->read("*all") == "");   // line buffer; no output without `\n'
+	  f->write("a\n");
+	  fr->seek("set", 1);
+	  lok(fr->read("*all") == "xa\n");  // now we have a whole line
+	  f->close(); fr->close();
+	}
+
+
+	// testing large files (> BUFSIZ)
+	io.output(file);
+	for( i=1,5001 ) { io.write('0123456789123'); }
+	io.write('\n12346');
+	io.close();
+	io.input(file);
+	var x = io.read('*a');
+	io.input()->seek('set', 0);
+	var y = io.read(30001)..io.read(1005)..io.read(0)..io.read(1)..io.read(100003);
+	lok(x == y && string.len(x) == 5001*13 + 6);
+	io.input()->seek('set', 0);
+	y = io.read();  // huge line
+	lok(x == y..'\n'..io.read());
+	lok(io.read() == null);
+	io.close(io.input());
+	lok(os.remove(file));
+	x = null; y = null;
+
+	x, y = pcall(io.popen, "ls");
+	if( x ) {
+	  lok(y->read("*a"));
+	  lok(y->close());
+	}
+
+
+	var t = os.time();
+	T = os.date("*t", t);
+	loadstring(os.date([=[lok(T.year==%Y && T.month==%m && T.day==%d &&
+	  T.hour==%H && T.min==%M && T.sec==%S &&
+	  T.wday==%w+1 && T.yday==%j && type(T.isdst) == 'boolean')]=], t))();
+
+	lok(os.time(T) == t);
+
+	T = os.date("!*t", t);
+	loadstring(os.date([=[!lok(T.year==%Y && T.month==%m && T.day==%d &&
+	  T.hour==%H && T.min==%M && T.sec==%S &&
+	  T.wday==%w+1 && T.yday==%j && type(T.isdst) == 'boolean')]=], t))();
+
+	{
+	  var T = os.date("*t");
+	  var t = os.time(T);
+	  lok(type(T.isdst) == 'boolean');
+	  T.isdst = null;
+	  var t1 = os.time(T);
+	  lok(t == t1);   // if isdst is absent uses correct default
+	}   
+
+	t = os.time(T);
+	T.year = T.year-1;
+	var t1 = os.time(T);
+	// allow for leap years
+	lok(math.abs(os.difftime(t,t1)/(24*3600) - 365) < 2);
+
+	t = os.time();
+	t1 = os.time(os.date("*t"));
+	lok(os.difftime(t1,t) <= 2);
+
+	t1 = os.time({year=2000, month=10, day=1, hour=23, min=12, sec=17});
+	var t2 = os.time({year=2000, month=10, day=1, hour=23, min=10, sec=19});
+	lok(os.difftime(t1,t2) == 60*2-2);
+
+	io.output(io.stdout);
+	var d = os.date('%d');
+	var m = os.date('%m');
+	var a = os.date('%Y');
+	var ds = os.date('%w') + 1;
+	var h = os.date('%H');
+	var min = os.date('%M');
+	var s = os.date('%S');
+	//io.write(string.format('test done on %2.2d/%2.2d/%d', d, m, a))
+	//io.write(string.format(', at %2.2d:%2.2d:%2.2d\n', h, min, s))
+	//io.write(string.format('%s\n', _VERSION))
+
+});
+
+lresults();

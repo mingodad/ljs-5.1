@@ -1,0 +1,32 @@
+// trace calls
+// example: lua -ltrace-calls bisect.lua
+
+var level=0;
+
+var function hook(event) {
+ var t=debug.getinfo(3);
+ io.write(level," >>> ",string.rep(" ",level));
+ if( t!=null && t.currentline>=0 ) { io.write(t.short_src,":",t.currentline," "); }
+ t=debug.getinfo(2);
+ if( event=="call" ) {
+  level+=1;
+ } else {
+  level-=1; if( level<0 ) { level=0; }
+ }
+ if( t.what=="main" ) {
+  if( event=="call" ) {
+   io.write("begin ",t.short_src);
+  } else {
+   io.write("end ",t.short_src);
+  }
+ } else if( t.what=="Lua" ) {
+// table.foreach(t,print)
+  io.write(event," ",t.name || "(Lua)"," <",t.linedefined,":",t.short_src,">");
+ } else {
+ io.write(event," ",t.name || "(C)"," [",t.what,"] ");
+ }
+ io.write("\n");
+}
+
+debug.sethook(hook,"cr");
+level=0;

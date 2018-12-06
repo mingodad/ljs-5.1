@@ -1,0 +1,13 @@
+// reads luac listings and reports global variable usage
+// lines where a global is written to are marked with "*"
+// typical usage: luac -p -l file.lua | lua globals.lua | sort | lua table.lua
+
+while( 1 ) {
+ var s=io.read();
+ if( s==null ) { break; }
+ var ok,_,l,op,g=string.find(s,"%[%-?(%d*)%]%s*([GS])ETGLOBAL.-;%s+(.*)$");
+ if( ok ) {
+  if( op=="S" ) { op="*"; } else { op=""; }
+  io.write(g,"\t",l,op,"\n");
+ }
+}
