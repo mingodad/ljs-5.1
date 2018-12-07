@@ -24,8 +24,8 @@
 enum RESERVED {
   /* terminal symbols denoted by reserved words */
   TK_BREAK = FIRST_RESERVED, TK_CASE, TK_CONTINUE,
-  /*TK_DEC,*/ TK_DEFAULT, TK_DO, TK_ELSE, TK_FALSE, TK___FILE__, TK_FOR, TK_FUNCTION,
-  TK_GOTO, TK_IF, TK_IN/*, TK_INC*/, TK___LINE__, TK_LOCAL, TK_NIL,
+  TK_DEFAULT, TK_DO, TK_ELSE, TK_FALSE, TK___FILE__, TK_FOR, TK_FUNCTION,
+  TK_GOTO, TK_IF, TK_IN, TK___LINE__, TK_LOCAL, TK_NIL,
   TK_RETURN, TK_SWITCH, TK_TRUE, TK_WHILE,
   /* other terminal symbols */
   TK_AND, TK_NOT, TK_OR, TK_POW,

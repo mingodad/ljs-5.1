@@ -35,9 +35,9 @@
 
 /* ORDER RESERVED */
 const char *const luaX_tokens [] = {
-    "break", "case", "continue", /*"dec",*/ "default", "do", "else",
+    "break", "case", "continue", "default", "do", "else",
     "false", "__FILE__", "for", "function", "goto", "if",
-    "in", /*"inc",*/ "__LINE__", "var", "null",
+    "in", "__LINE__", "var", "null",
     "return", "switch", "true", "while",
     "&&", "||", "!", "**",
     "..", "...", "==", ">=", "<=", "!=",
