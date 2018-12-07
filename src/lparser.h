@@ -34,6 +34,9 @@ typedef enum {
   VVARARG	/* info = instruction pc */
 } expkind;
 
+#define vkisvar(k)	(VLOCAL <= (k) && (k) <= VINDEXED)
+#define vkisinreg(k)	((k) == VNONRELOC || (k) == VLOCAL)
+
 typedef struct expdesc {
   expkind k;
   union {

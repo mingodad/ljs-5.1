@@ -969,7 +969,7 @@ static const struct {
    {7, 7}, {7, 7},           /* '<<' '>>' */
    {9, 8},                   /* '..' (right associative) */
    {3, 3}, {3, 3}, {3, 3},   /* ==, <, <= */
-   {3, 3}, {3, 3}, {3, 3},   /* ~=, >, >= */
+   {3, 3}, {3, 3}, {3, 3},   /* !=, >, >= */
    {2, 2}, {1, 1}            /* and, or */
 };
 
@@ -1093,11 +1093,9 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
   }
 }
 
-
 static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
   expdesc e;
-  check_condition(ls, VLOCAL <= lh->v.k && lh->v.k <= VINDEXED,
-                      "syntax error");
+  check_condition(ls, vkisvar(lh->v.k), "syntax error");
   if (testnext(ls, ',')) {  /* assignment -> `,' primaryexp assignment */
     struct LHS_assign nv;
     nv.prev = lh;
@@ -1137,7 +1135,7 @@ static void assign_compound (LexState *ls, struct LHS_assign *lh, int opType) {
   /*store expression before grounding */
   lhv = lh->v;
 
-  check_condition(ls, VLOCAL <= lh->v.k && lh->v.k <= VINDEXED,
+  check_condition(ls, vkisvar(lh->v.k),
                       "syntax error in left hand expression in compound assignment");
 
   /* parse Compound operation. */
@@ -1489,7 +1487,7 @@ static void exprstat (LexState *ls) {
         break;
       default:
         luaX_syntaxerror(ls, lua_pushfstring(ls->L,
-                         "'+=', '-=', '*=', '/=', '%%=', '..=' or '=' expected"));
+                         "'++', '--', +=', '-=', '*=', '/=', '%%=', '..=' or '=' expected"));
         break;
     }
   }
@@ -1528,6 +1526,7 @@ static void retstat (LexState *ls) {
   luaK_ret(fs, first, nret);
 }
 
+#if 0
 /* written by Andreas Falkenhahn and posted to lua.bazar2.conectiva.com.br on 01 Sep 2004
    changed to process multiple values in 0.6.0, November 10, 2007; patched 0.29.1, December 13, 2009 */
 
@@ -1594,7 +1593,6 @@ static void switchstat (LexState *ls, int line) {
   leaveblock(fs);
 }
 
-#if 0
 void codecompcase (FuncState *fs, int base, int nargs, expdesc *e) {
   //luaK_codeABC(fs, OP_CMD, base, nargs, CMD_CASE);  /* nargs: all registers set before including instr# */
   e->u.s.info = luaK_jump(fs);
@@ -1692,6 +1690,8 @@ static void inc_dec_op (LexState *ls, OpCode op, expdesc *v, int isPost) {
   init_exp(&e2, VKNUM, 0);
   e2.u.nval = (lua_Integer)1;
   if(isPost) {
+    check_condition(ls, vkisvar(v->k),
+                      "syntax error expression not assignable");
     lv = e1 = *v;
     if (v->k == VINDEXED)
       luaK_reserveregs(fs, 1);
@@ -1703,6 +1703,8 @@ static void inc_dec_op (LexState *ls, OpCode op, expdesc *v, int isPost) {
     return;
   }
   primaryexp(ls, v);
+  check_condition(ls, vkisvar(v->k),
+                      "syntax error expression not assignable");
   e1 = *v;
   if (v->k == VINDEXED)
     luaK_reserveregs(fs, fs->freereg - indices);
@@ -1761,11 +1763,11 @@ static int statement (LexState *ls) {
       continuestat(ls);
       return 1;	  /* must be last statement */
     }
+#if 0
     case TK_SWITCH: {  /* stat -> switchstat */
       switchstat(ls, line);
       return 0;
     }
-#if 0
     case TK_INC: {  /* added 0.5.2.*/
       luaX_next(ls);
       changevalue(ls, OP_ADD, NULL);
