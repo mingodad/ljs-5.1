@@ -18,6 +18,9 @@
 ** ===================================================================
 */
 
+#if !defined(LUA_LJS) && !defined(NOLUA_LJS)
+#define LUA_LJS
+#endif
 
 /*
 @@ LUA_ANSI controls the use of non-ansi features.
