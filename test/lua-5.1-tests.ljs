@@ -1,4 +1,4 @@
-require ("minctest");
+if(!pcall(require,"minctest")) require("test/minctest");
 
 var onLuajit = jit;
 //for luajit
@@ -865,7 +865,7 @@ lrun("closures", function() {
 	  lok(coroutine.running() == f);
 	  lok(coroutine.status(f) == "running");
 	  var xarg = {...};
-	  for( i=1,#xarg ) {
+	  for( i=1,table.getn(xarg) ) {
 	    _G.x = {coroutine.yield(unpack(xarg[i]))};
 	  }
 	  return unpack(a);
