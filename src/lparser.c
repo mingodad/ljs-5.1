@@ -728,24 +728,6 @@ static void prefixexp (LexState *ls, expdesc *v) {
       luaX_next(ls);
       expr(ls, v);
       check_match(ls, ')', '(', line);
-      if (testnext(ls, '?')) {
-        int condexit;
-        int escapelist = NO_JUMP;
-        int reg;
-        FuncState *fs = ls->fs;
-        if (v->k == VNIL) v->k = VFALSE;  /* 'falses' are all equal here */
-        luaK_goiftrue(ls->fs, v);  /* skip over block if condition is false */
-        condexit = v->f;
-        expr(ls, v);  /* eval part for true conditional */
-        reg = luaK_exp2anyreg(fs, v);  /* set result to reg. */
-        luaK_concat(fs, &escapelist, luaK_jump(fs));  /* must jump over it */
-        luaK_patchtohere(fs, condexit);
-        checknext(ls, ':');
-        expr(ls, v);  /* eval part for false conditional */
-        luaK_exp2reg(fs, v, reg);  /* set result to reg. */
-        luaK_patchtohere(fs, escapelist);  /* patch escape list to conditional end */
-        return;
-      }
       luaK_dischargevars(ls->fs, v);
       return;
     }
@@ -1013,6 +995,23 @@ static BinOpr subexpr (LexState *ls, expdesc *v, unsigned int limit) {
 
 static void expr (LexState *ls, expdesc *v) {
   subexpr(ls, v, 0);
+  if (testnext(ls, '?')) {
+    int condexit;
+    int escapelist = NO_JUMP;
+    int reg;
+    FuncState *fs = ls->fs;
+    if (v->k == VNIL) v->k = VFALSE;  /* 'falses' are all equal here */
+    luaK_goiftrue(ls->fs, v);  /* skip over block if condition is false */
+    condexit = v->f;
+    expr(ls, v);  /* eval part for true conditional */
+    reg = luaK_exp2anyreg(fs, v);  /* set result to reg. */
+    luaK_concat(fs, &escapelist, luaK_jump(fs));  /* must jump over it */
+    luaK_patchtohere(fs, condexit);
+    checknext(ls, ':');
+    expr(ls, v);  /* eval part for false conditional */
+    luaK_exp2reg(fs, v, reg);  /* set result to reg. */
+    luaK_patchtohere(fs, escapelist);  /* patch escape list to conditional end */
+  }
 }
 
 /* }==================================================================== */
