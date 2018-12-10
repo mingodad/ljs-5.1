@@ -356,13 +356,26 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         } else if (ls->current == '*') {
             next(ls);
             int nested = 1;
+            int eq_follow = ls->current == '=';
             for (;;) {
             switch (ls->current) {
               case EOZ:
                 luaX_lexerror(ls, "unfinished long comment", TK_EOS);
                 break;  /* to avoid warnings */
+              case '=':
+                next(ls);
+                if(!eq_follow) break;
+                if(ls->current == '*') {
+                  next(ls);
+                  if(ls->current == '/') {
+                    next(ls);
+                    goto end_long_comment;
+                  }
+                }
+                break;
               case '*':
                 next(ls);
+                if(eq_follow) break;
                 if (ls->current == '/') {
                   next(ls);
                   if(--nested == 0) goto end_long_comment;
@@ -370,7 +383,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
                 break;
               case '/':
                 next(ls);
-                if(ls->current == '*') ++nested;
+                if(!eq_follow && ls->current == '*') ++nested;
                 continue;
               case '\n':
               case '\r': {
