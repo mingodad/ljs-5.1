@@ -165,9 +165,12 @@ static void new_localvar (LexState *ls, TString *name, int n) {
   vidx = fs->bl ? fs->bl->nactvar : 0;
   nactvar_n = fs->nactvar+n;
   for (; vidx < nactvar_n; ++vidx) {
-    if (name == getlocvar(fs, vidx).varname)
+    if (name == getlocvar(fs, vidx).varname) {
+      /* allow '_' duplicates */
+      if(name->tsv.len == 1 && getstr(name)[0] == '_') break;
       luaX_syntaxerror(ls, luaO_pushfstring(ls->L,
              "Name [%s] already declared", getstr(name)));
+    }
   }
   luaY_checklimit(fs, nactvar_n+1, LUAI_MAXVARS, "local variables");
   fs->actvar[nactvar_n] = cast(unsigned short, registerlocalvar(ls, name));
