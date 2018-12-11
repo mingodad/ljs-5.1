@@ -6,6 +6,7 @@
 
 
 #include <string.h>
+#include <stdio.h>
 
 #define lparser_c
 #define LUA_CORE
@@ -61,6 +62,15 @@ static void anchor_token (LexState *ls) {
     TString *ts = ls->t.seminfo.ts;
     luaX_newstring(ls, getstr(ts), ts->tsv.len);
   }
+}
+
+#define MAXSRC          80
+static void parser_warning (LexState *ls, const char *msg) {
+  char buff[MAXSRC];
+  luaO_chunkid(buff, getstr(ls->source), MAXSRC);
+  msg = luaO_pushfstring(ls->L, "%s:%d: warning %s", buff, ls->linenumber, msg);
+  fprintf(stderr, "%s\n", msg);
+  fflush(stderr);
 }
 
 
@@ -161,17 +171,28 @@ static int registerlocalvar (LexState *ls, TString *varname) {
 
 static void new_localvar (LexState *ls, TString *name, int n) {
   FuncState *fs = ls->fs;
-  int vidx, nactvar_n;
-  vidx = fs->bl ? fs->bl->nactvar : 0;
-  nactvar_n = fs->nactvar+n;
-  for (; vidx < nactvar_n; ++vidx) {
-    if (name == getlocvar(fs, vidx).varname) {
-      /* allow '_' duplicates */
-      if(name->tsv.len == 1 && getstr(name)[0] == '_') break;
-      luaX_syntaxerror(ls, luaO_pushfstring(ls->L,
-             "Name [%s] already declared", getstr(name)));
+  int nactvar_n = fs->nactvar+n;
+
+  /* allow '_' and '(for...' duplicates */
+  const char *str_name = getstr(name);
+  if(!(str_name[0] == '(' || (name->tsv.len == 1 && str_name[0] == '_'))) {
+    int vidx = 0;
+    for (; vidx < nactvar_n; ++vidx) {
+      if (name == getlocvar(fs, vidx).varname) {
+        if(fs->bl && vidx < fs->bl->nactvar) {
+          int saved_top = lua_gettop(ls->L);
+          parser_warning(ls, luaO_pushfstring(ls->L,
+                 "Name [%s] already declared will be shadowed", str_name));
+          lua_settop(ls->L, saved_top);
+        }
+        else {
+          luaX_syntaxerror(ls, luaO_pushfstring(ls->L,
+                 "Name [%s] already declared", str_name));
+        }
+      }
     }
   }
+
   luaY_checklimit(fs, nactvar_n+1, LUAI_MAXVARS, "local variables");
   fs->actvar[nactvar_n] = cast(unsigned short, registerlocalvar(ls, name));
 }
