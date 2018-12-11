@@ -1,4 +1,4 @@
-if(!pcall(require,"minctest")) require("test/minctest");
+if(!pcall(require,"minctest")) require("tests/minctest");
 
 var onLuajit = jit;
 //for luajit
@@ -3995,6 +3995,222 @@ lrun("files", function() {
 	//io.write(string.format(', at %2.2d:%2.2d:%2.2d\n', h, min, s))
 	//io.write(string.format('%s\n', _VERSION))
 
+});
+
+lrun("ljs", function() {
+
+	// vector tests
+	var v3 = [1];
+	var v4 = [1,2,3,4,5];
+	lok( v3[1] == v4[1] && #v4 == 5);
+
+	// statements
+	var loop = 0;
+
+	// if statements
+	var res = 1;
+	if (100 > 500) {
+	    res = 2;
+	} else if (200 < 100) {
+	    res = 3;
+	} else {
+	    res = 4;
+	}
+	lok( res == 4 );
+
+	if (600 > 500) {
+	    res = 2;
+	} else if (200 < 100) {
+	    res = 3;
+	} else {
+	    res = 4;
+	}
+	lok( res == 2 );
+
+	if (400 > 500) {
+	    res = 2;
+	} else if (200 < 300) {
+	    res = 3;
+	} else {
+	    res = 4;
+	}
+	lok( res == 3 );
+
+	// while
+	loop = 0
+	while (loop < 10) {
+	    loop++;
+	}
+	lok( loop == 10 );
+
+	loop = 0;
+	while (loop > 10) {
+	    loop++;
+	}
+	lok( loop == 0 );
+
+	// do
+
+	loop = 0
+	do {
+	    loop++;
+	} while (loop < 10)
+
+	lok( loop == 10 );
+
+	loop = 0
+	do {
+	    loop++;
+	}while (loop > 10)
+
+	lok( loop == 1 );
+
+	// break and continue
+
+	var marker = "marker"
+	var ok = false;
+	while (1) {
+	    if (1) {
+		ok = true;
+		break;
+	    }
+	    ok = false;
+	}
+	lok( ok );
+
+	var i = 0;
+	while (true) {
+	    if (i == 0) {
+		i = 10;
+		continue;
+	    } else if (i == 10) {
+		break;
+	    }
+	    lok( false );
+	}
+	lok( i == 10 );
+
+	//duplicated declaration
+	var aa = 1;
+	{
+	    var ai =2;
+	    var bi =3;
+	}
+	var bb = 2;
+	{
+	    var ai =3;
+	    var bi = 5;
+	}
+	var cc = 3;
+	{
+	    var ai =3;
+	    var bi = 5;
+	}
+
+	{ 
+		var a = -5;
+		var b = 2;
+		//lok(a >> b == -5 >> 2);
+		//lok(a >>> b == -5 >>> 2);
+		//lok(a << b == -5 << 2);
+		lok(a + b == -5 + 2);
+		lok(a - b == -5 - 2);
+		lok(a * b == -5 * 2);
+		lok(a / b == -5 / 2);
+		lok(a % b == -5 % 2);
+		//lok((a & b) == (-5 & 2));
+		//lok((a | b) == (-5 | 2));
+		//lok((a ^ b) == (-5 ^ 2));
+		lok(-a == 5);
+		//lok(~a == ~-5);
+
+		a = 5;
+		b = 2;
+		//lok(a >> b == 5 >> 2);
+		//lok(a >>> b == 5 >>> 2);
+		//lok(a << b == 5 << 2);
+		lok(a + b == 5 + 2);
+		lok(a - b == 5 - 2);
+		lok(a * b == 5 * 2);
+		lok(a / b == 5 / 2);
+		lok(a % b == 5 % 2);
+		//lok((a & b) == (5 & 2));
+		//lok((a | b) == (5 | 2));
+		//lok((a ^ b) == (5 ^ 2));
+		lok(-a == -5);
+		//lok(~a == ~5);
+	}
+
+	{
+		var ary = [];
+		var i = 0;
+		ary[i++] = 1;
+		ary[i++] = 2;
+		ary[i++] = 3;
+
+		lok(ary[--i] == 3);
+		lok(ary[--i] == 2);
+		lok(ary[--i] == 1);
+	}
+
+	{
+		var x = 10;
+		lok((x-- + 10) == 20);
+		lok((x++ + 10) == 19);
+		//lok( ((x)--) == 9);  // parens are OK
+		//lok( ((x)++) == 10);
+
+		x = 10;
+		lok((--x + 10) == 19);
+		lok((++x + 10) == 20);
+
+		var obj = {x:10};
+		lok( (obj.x-- + 10) == 20);
+		lok( (obj.x++ + 10) == 19);
+
+		obj = {x:10};
+		lok( (--obj.x + 10) == 19);
+		lok( (++obj.x + 10) == 20);
+		
+		var a = {a = [1, 2, 3, [4, 5]]};
+		lok(++a.a[4][1] == 5);
+		lok(++a.a[4][1] == 6);
+		lok(++a.a[4][1] == 7);
+		lok(--a.a[4][1] == 6);
+		lok(--a.a[4][1] == 5);
+		lok(--a.a[4][1] == 4);
+		lok(a.a[4][1]++ == 4);
+		lok(a.a[4][1]++ == 5);
+		lok(a.a[4][1]++ == 6);
+		lok(a.a[4][1] == 7);
+		lok(a.a[4][1]-- == 7);
+		lok(a.a[4][1]-- == 6);
+		lok(a.a[4][1]-- == 5);
+		lok(a.a[4][1] == 4);
+	}
+
+	{
+		var x = 10;
+		x+= 10;
+		lok(x == 20);
+		x-= 10;
+		lok(x == 10);
+		x *= 10;
+		lok(x == 100);
+		x /= 10;
+		lok(x == 10);
+	}
+
+	{
+		var x = 10;
+		var y = 0;
+		y = x < 10 ? 1 : 2;
+		lok(y == 2);
+		y = x > 10 ? 1 : 2;
+		lok(y == 2);
+		y = x == 10 ? 1 : 2;
+		lok(y == 1);
+	}
 });
 
 lresults();
