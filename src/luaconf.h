@@ -74,7 +74,7 @@
 #define LUA_INIT	"LUA_INIT"
 
 
-#if LUA_LJS
+#ifdef LUA_LJS
   #define LUA_SCRIPT_EXT ".ljs"
 #else
   #define LUA_SCRIPT_EXT ".lua"
