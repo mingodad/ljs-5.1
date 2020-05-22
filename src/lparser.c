@@ -1025,6 +1025,7 @@ static void expr (LexState *ls, expdesc *v) {
     luaK_goiftrue(ls->fs, v);  /* skip over block if condition is false */
     condexit = v->f;
     expr(ls, v);  /* eval part for true conditional */
+    luaK_exp2nextreg(fs, v);  /* set result to reg. */
     reg = luaK_exp2anyreg(fs, v);  /* set result to reg. */
     luaK_concat(fs, &escapelist, luaK_jump(fs));  /* must jump over it */
     luaK_patchtohere(fs, condexit);
