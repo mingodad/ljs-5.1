@@ -1276,11 +1276,11 @@ static void dowhilestat (LexState *ls, int line) {
   luaX_next(ls);  /* skip DO */
   checknext(ls, '{');
   chunk(ls);
-  luaK_patchtohere(fs, bl1.continuelist);
   check_match(ls, '}', TK_DO, line);
   check_match(ls, TK_WHILE, TK_DO, line);
   line = ls->linenumber;
   checknext(ls, '(');
+  luaK_patchtohere(fs, bl1.continuelist);
   condexit = nocond(ls);  /* read condition (inside scope block) */
   check_match(ls, ')', TK_WHILE, line);
   if (!bl2.upval) {  /* no upvalues? */
